@@ -1,0 +1,1979 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-area">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="header-text">
+                <h2>Endometriosis Detection</h2>
+                <p>AI-powered prediction based on patient symptoms and history</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat">
+                <span class="stat-number">{{ total_predictions|default(0) }}</span>
+                <span class="stat-label">Total Predictions</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, msg in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'info-circle' }}"></i>
+                        <span>{{ msg }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <div class="detection-container">
+        <!-- Left Panel: Input Form -->
+        <div class="detection-form">
+            <div class="form-card">
+                <h3><i class="fas fa-user-injured"></i> Patient Information</h3>
+                
+                <div class="form-group">
+                    <label for="patientSelect">
+                        <i class="fas fa-user"></i> Select Patient *
+                    </label>
+                    <select id="patientSelect" class="form-control" required>
+                        <option value="">-- Select a patient --</option>
+                        {% if patients %}
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}" data-name="{{ patient.full_name }}">
+                                {{ patient.full_name }} (ID: {{ patient.id }})
+                            </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                    <small class="form-text">Or <a href="{{ url_for('doctor.create_patient') }}">create new patient</a></small>
+                </div>
+                
+                <div class="patient-info-card" id="patientInfoCard" style="display: none;">
+                    <div class="info-content">
+                        <div class="info-row">
+                            <span class="info-label">Name:</span>
+                            <span class="info-value" id="infoName"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Age:</span>
+                            <span class="info-value" id="infoAge"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Gender:</span>
+                            <span class="info-value" id="infoGender"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Contact:</span>
+                            <span class="info-value" id="infoContact"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-card">
+                <h3><i class="fas fa-clipboard-check"></i> Symptoms & Medical History</h3>
+                <p class="form-subtitle">Select all that apply to the patient:</p>
+                
+                <form id="predictionForm">
+                    <input type="hidden" name="patient_id" id="patientId">
+                    
+                    <div class="form-section">
+                        <h4>Menstrual Irregularity</h4>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="menstrual_irregularity" value="0" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Regular</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="menstrual_irregularity" value="1">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Irregular</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Hormone Level Abnormality</h4>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="hormone_level" value="0" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Normal</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="hormone_level" value="1">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Abnormal</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Infertility</h4>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="infertility" value="0" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">No</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="infertility" value="1">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Yes</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Family History of Endometriosis</h4>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="family_history" value="0" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">No</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="family_history" value="1">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Yes</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Ovulation Dysfunction</h4>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="ovulation_dysfunction" value="0" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">No</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="ovulation_dysfunction" value="1">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Yes</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Prior Gynecological Surgery</h4>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="prior_surgery" value="0" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">No</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="prior_surgery" value="1">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Yes</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="clearBtn">
+                            <i class="fas fa-redo"></i> Clear
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="predictBtn" disabled>
+                            <i class="fas fa-brain"></i> Predict Endometriosis
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Panel: Results -->
+        <div class="detection-results">
+            <div class="results-card">
+                <h3><i class="fas fa-chart-bar"></i> Prediction Results</h3>
+                
+                <div class="results-placeholder" id="resultsPlaceholder">
+                    <div class="placeholder-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <h4>Ready for Analysis</h4>
+                    <p>Select a patient and symptoms to begin prediction</p>
+                </div>
+                
+                <div class="results-content" id="resultsContent" style="display: none;">
+                    <!-- Patient Info -->
+                    <div class="result-section">
+                        <h4>Patient Details</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Name:</span>
+                                <span class="info-value" id="resultName"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">ID:</span>
+                                <span class="info-value" id="resultId"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Date:</span>
+                                <span class="info-value" id="resultDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Diagnosis -->
+                    <div class="result-section">
+                        <h4>Diagnosis</h4>
+                        <div class="diagnosis-card" id="diagnosisCard">
+                            <div class="diagnosis-icon">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            <div class="diagnosis-content">
+                                <h5 id="diagnosisText">Analyzing...</h5>
+                                <p id="diagnosisConfidence">Confidence: 0%</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Probabilities -->
+                    <div class="result-section">
+                        <h4>Probability Breakdown</h4>
+                        <div class="probability-cards">
+                            <div class="probability-card negative">
+                                <div class="probability-header">
+                                    <i class="fas fa-times-circle"></i>
+                                    <h5>No Endometriosis</h5>
+                                </div>
+                                <div class="probability-value" id="probNoEndo">0%</div>
+                                <div class="probability-bar">
+                                    <div class="probability-fill" id="probNoEndoFill"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="probability-card positive">
+                                <div class="probability-header">
+                                    <i class="fas fa-check-circle"></i>
+                                    <h5>Endometriosis</h5>
+                                </div>
+                                <div class="probability-value" id="probEndo">0%</div>
+                                <div class="probability-bar">
+                                    <div class="probability-fill" id="probEndoFill"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recommendations -->
+                    <div class="result-section">
+                        <h4>Recommendations</h4>
+                        <div class="recommendations" id="recommendations">
+                            <p>Complete prediction to see recommendations</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="result-actions">
+                        <button class="btn btn-success" id="saveBtn">
+                            <i class="fas fa-save"></i> Save Diagnosis
+                        </button>
+                        <button class="btn btn-outline" id="newBtn">
+                            <i class="fas fa-redo"></i> New Prediction
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Predictions -->
+            <!-- <div class="recent-card">
+                <h3><i class="fas fa-history"></i> Recent Predictions</h3>
+                <div class="recent-list" id="recentList">
+                    <div class="empty-recent">
+                        <i class="fas fa-chart-line"></i>
+                        <p>No recent predictions</p>
+                    </div>
+                </div>
+            </div> -->
+        </div>
+    </div>
+</div>
+
+<style>
+/* ================= BASE STYLES ================= */
+.content-area {
+    padding: 20px;
+    background: #f5f5f5;
+    min-height: calc(100vh - 150px);
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    font-size: 12px;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* ================= PAGE HEADER ================= */
+.page-header {
+    background: white;
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #e0e0e0;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-icon {
+    width: 50px;
+    height: 50px;
+    background: #2864bd;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+}
+
+.header-text h2 {
+    color: #222;
+    font-size: 18px;
+    margin: 0 0 4px 0;
+    font-weight: 600;
+}
+
+.header-text p {
+    color: #777;
+    font-size: 11px;
+    margin: 0;
+}
+
+.header-stats .stat {
+    text-align: right;
+}
+
+.stat-number {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #2864bd;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #888;
+}
+
+/* ================= FLASH MESSAGES ================= */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.flash-message {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.flash-success {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.flash-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.flash-warning {
+    background: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+/* ================= DETECTION CONTAINER ================= */
+.detection-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 992px) {
+    .detection-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ================= FORM STYLES ================= */
+.detection-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-card {
+    background: white;
+    border-radius: 6px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+}
+
+.form-card h3 {
+    color: #222;
+    font-size: 14px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.form-card h3 i {
+    color: #2864bd;
+}
+
+.form-subtitle {
+    color: #777;
+    font-size: 11px;
+    margin-bottom: 14px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: flex;
+    margin-bottom: 6px;
+    color: #333;
+    font-weight: 500;
+    font-size: 12px;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: all 0.2s;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #2864bd;
+    box-shadow: 0 0 0 3px rgba(40, 100, 189, 0.1);
+}
+
+.form-text {
+    color: #999;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.form-text a {
+    color: #2864bd;
+    text-decoration: none;
+}
+
+.form-text a:hover {
+    text-decoration: underline;
+}
+
+/* ================= PATIENT INFO CARD ================= */
+.patient-info-card {
+    background: #f9f9f9;
+    border-radius: 4px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    margin-top: 10px;
+}
+
+.info-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+}
+
+.info-label {
+    color: #777;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.info-value {
+    color: #222;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* ================= FORM SECTIONS ================= */
+.form-section {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h4 {
+    color: #333;
+    font-size: 12px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.radio-group {
+    display: flex;
+    gap: 16px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.radio-label:hover {
+    background: #f8f9fa;
+}
+
+.radio-label input {
+    display: none;
+}
+
+.radio-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s;
+}
+
+.radio-label input:checked + .radio-custom {
+    border-color: #2864bd;
+    background: #2864bd;
+}
+
+.radio-label input:checked + .radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+.radio-text {
+    color: #333;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+/* ================= FORM ACTIONS ================= */
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+
+.btn-primary {
+    background: #2864bd;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1d4a8a;
+    transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+.btn-outline {
+    background: white;
+    color: #2864bd;
+    border: 2px solid #2864bd;
+}
+
+.btn-outline:hover {
+    background: #e3f2fd;
+    transform: translateY(-2px);
+}
+
+/* ================= RESULTS STYLES ================= */
+.detection-results {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.results-card, .recent-card {
+    background: white;
+    border-radius: 6px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+}
+
+.results-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.placeholder-icon {
+    font-size: 44px;
+    color: #ddd;
+    margin-bottom: 12px;
+}
+
+.results-placeholder h4 {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.results-placeholder p {
+    color: #999;
+    font-size: 12px;
+}
+
+/* ================= RESULTS CONTENT ================= */
+.result-section {
+    margin-bottom: 18px;
+}
+
+.result-section h4 {
+    color: #333;
+    font-size: 13px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item .info-label {
+    color: #999;
+    font-size: 11px;
+    margin-bottom: 2px;
+}
+
+.info-item .info-value {
+    color: #222;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* ================= DIAGNOSIS CARD ================= */
+.diagnosis-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 4px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+}
+
+.diagnosis-icon {
+    width: 50px;
+    height: 50px;
+    background: #2864bd;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+}
+
+.diagnosis-content h5 {
+    margin: 0 0 4px 0;
+    color: #222;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.diagnosis-content p {
+    margin: 0;
+    color: #777;
+    font-size: 11px;
+}
+
+/* ================= PROBABILITY CARDS ================= */
+.probability-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.probability-card {
+    padding: 14px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.probability-card.negative {
+    border-color: #dc3545;
+}
+
+.probability-card.positive {
+    border-color: #28a745;
+}
+
+.probability-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.probability-header i {
+    font-size: 20px;
+}
+
+.probability-card.negative .probability-header i {
+    color: #dc3545;
+}
+
+.probability-card.positive .probability-header i {
+    color: #28a745;
+}
+
+.probability-header h5 {
+    margin: 0;
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.probability-value {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.probability-card.negative .probability-value {
+    color: #dc3545;
+}
+
+.probability-card.positive .probability-value {
+    color: #28a745;
+}
+
+.probability-bar {
+    height: 8px;
+    background: #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.probability-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 1s ease;
+}
+
+.probability-card.negative .probability-fill {
+    background: #dc3545;
+}
+
+.probability-card.positive .probability-fill {
+    background: #28a745;
+}
+
+/* ================= RECOMMENDATIONS ================= */
+.recommendations {
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.recommendations p {
+    margin: 0;
+    color: #777;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.recommendations ul {
+    margin: 8px 0 0 0;
+    padding-left: 18px;
+}
+
+.recommendations li {
+    margin: 4px 0;
+    font-size: 11px;
+    color: #777;
+}
+
+/* ================= RESULT ACTIONS ================= */
+.result-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+/* ================= RECENT PREDICTIONS ================= */
+.recent-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.recent-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.recent-item:last-child {
+    border-bottom: none;
+}
+
+.recent-info {
+    flex: 1;
+}
+
+.recent-name {
+    color: #333;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.recent-date {
+    color: #999;
+    font-size: 11px;
+}
+
+.recent-result {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.recent-result.positive {
+    background: #d4edda;
+    color: #155724;
+}
+
+.recent-result.negative {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.empty-recent {
+    text-align: center;
+    padding: 24px 16px;
+    color: #999;
+}
+
+.empty-recent i {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.4;
+}
+
+.empty-recent p {
+    margin: 0;
+    font-size: 12px;
+}
+
+/* ================= RESPONSIVE STYLES ================= */
+@media (max-width: 1024px) {
+    .content-area {
+        padding: 18px 15px;
+    }
+
+    .detection-container {
+        gap: 18px;
+    }
+
+    .form-card {
+        padding: 16px;
+    }
+
+    .form-card h3 {
+        font-size: 13px;
+    }
+
+    .form-section h4 {
+        font-size: 11px;
+    }
+
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .probability-cards {
+        gap: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        padding: 15px 12px;
+    }
+
+    .page-header {
+        padding: 18px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        border-radius: 10px;
+        margin-bottom: 18px;
+    }
+
+    .header-content {
+        gap: 12px;
+        width: 100%;
+    }
+
+    .header-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+
+    .header-text h2 {
+        font-size: 18px;
+    }
+
+    .header-text p {
+        font-size: 10px;
+    }
+
+    .header-stats {
+        text-align: left;
+    }
+
+    .stat-number {
+        font-size: 24px;
+    }
+
+    .stat-label {
+        font-size: 9px;
+    }
+
+    .flash-messages {
+        margin-bottom: 15px;
+    }
+
+    .flash-message {
+        padding: 10px 12px;
+        font-size: 10px;
+        gap: 8px;
+    }
+
+    .detection-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .detection-form,
+    .detection-results {
+        gap: 15px;
+    }
+
+    .form-card,
+    .results-card,
+    .recent-card {
+        padding: 14px 12px;
+        border-radius: 8px;
+    }
+
+    .form-card h3 {
+        font-size: 12px;
+        margin-bottom: 12px;
+    }
+
+    .form-card h3 i {
+        font-size: 13px;
+    }
+
+    .form-subtitle {
+        font-size: 10px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        font-size: 11px;
+        margin-bottom: 5px;
+    }
+
+    .form-control {
+        padding: 7px 8px;
+        font-size: 10px;
+    }
+
+    .form-text {
+        font-size: 9px;
+    }
+
+    .patient-info-card {
+        padding: 10px;
+        margin-top: 8px;
+    }
+
+    .info-content {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .info-row {
+        padding: 3px 0;
+    }
+
+    .info-label,
+    .info-value {
+        font-size: 9px;
+    }
+
+    .form-section {
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+    }
+
+    .form-section h4 {
+        font-size: 10px;
+        margin-bottom: 8px;
+    }
+
+    .radio-group {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .radio-label {
+        padding: 3px 5px;
+        font-size: 10px;
+    }
+
+    .radio-custom {
+        width: 18px;
+        height: 18px;
+    }
+
+    .radio-text {
+        font-size: 10px;
+    }
+
+    .form-actions {
+        gap: 8px;
+        margin-top: 15px;
+    }
+
+    .btn {
+        padding: 7px 12px;
+        font-size: 10px;
+        gap: 5px;
+    }
+
+    .results-placeholder {
+        padding: 30px 15px;
+    }
+
+    .placeholder-icon {
+        font-size: 36px;
+        margin-bottom: 10px;
+    }
+
+    .results-placeholder h4 {
+        font-size: 12px;
+    }
+
+    .results-placeholder p {
+        font-size: 10px;
+    }
+
+    .result-section {
+        margin-bottom: 15px;
+    }
+
+    .result-section h4 {
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .info-item .info-label {
+        font-size: 9px;
+    }
+
+    .info-item .info-value {
+        font-size: 10px;
+    }
+
+    .diagnosis-card {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .diagnosis-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+
+    .diagnosis-content h5 {
+        font-size: 12px;
+        margin-bottom: 2px;
+    }
+
+    .diagnosis-content p {
+        font-size: 9px;
+    }
+
+    .probability-cards {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .probability-card {
+        padding: 12px;
+    }
+
+    .probability-header h5 {
+        font-size: 11px;
+    }
+
+    .probability-value {
+        font-size: 18px;
+    }
+
+    .recommendations {
+        padding: 10px;
+    }
+
+    .recommendations p {
+        font-size: 9px;
+    }
+
+    .recommendations ul {
+        margin: 6px 0 0 16px;
+    }
+
+    .recommendations li {
+        font-size: 9px;
+        margin: 3px 0;
+    }
+
+    .result-actions {
+        gap: 8px;
+    }
+
+    .recent-list {
+        max-height: 250px;
+    }
+
+    .recent-item {
+        padding: 8px 10px;
+    }
+
+    .recent-name {
+        font-size: 10px;
+    }
+
+    .recent-date {
+        font-size: 9px;
+    }
+
+    .recent-result {
+        font-size: 9px;
+        padding: 2px 8px;
+    }
+
+    .empty-recent {
+        padding: 20px 12px;
+    }
+
+    .empty-recent i {
+        font-size: 28px;
+        margin-bottom: 6px;
+    }
+
+    .empty-recent p {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 12px 10px;
+    }
+
+    .page-header {
+        padding: 14px 12px;
+        margin-bottom: 14px;
+        border-radius: 8px;
+    }
+
+    .header-content {
+        gap: 8px;
+    }
+
+    .header-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+
+    .header-text h2 {
+        font-size: 14px;
+    }
+
+    .header-text p {
+        font-size: 8px;
+    }
+
+    .flash-message {
+        padding: 8px 10px;
+        font-size: 8px;
+        margin-bottom: 8px;
+    }
+
+    .detection-container {
+        gap: 12px;
+    }
+
+    .detection-form,
+    .detection-results {
+        gap: 12px;
+    }
+
+    .form-card,
+    .results-card,
+    .recent-card {
+        padding: 12px 10px;
+        border-radius: 6px;
+    }
+
+    .form-card h3 {
+        font-size: 11px;
+        margin-bottom: 10px;
+        gap: 6px;
+    }
+
+    .form-card h3 i {
+        font-size: 12px;
+    }
+
+    .form-subtitle {
+        font-size: 8px;
+        margin-bottom: 12px;
+    }
+
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .form-group label {
+        font-size: 9px;
+        margin-bottom: 4px;
+        gap: 4px;
+    }
+
+    .form-control {
+        padding: 6px 7px;
+        font-size: 8px;
+    }
+
+    .form-text {
+        font-size: 7px;
+        margin-top: 2px;
+    }
+
+    .patient-info-card {
+        padding: 8px;
+        margin-top: 6px;
+    }
+
+    .info-content {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .info-row {
+        padding: 2px 0;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .info-label,
+    .info-value {
+        font-size: 8px;
+    }
+
+    .form-section {
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+    }
+
+    .form-section h4 {
+        font-size: 9px;
+        margin-bottom: 6px;
+    }
+
+    .radio-group {
+        gap: 8px;
+        flex-direction: column;
+    }
+
+    .radio-label {
+        padding: 2px 4px;
+        font-size: 8px;
+        gap: 4px;
+    }
+
+    .radio-custom {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+    }
+
+    .radio-text {
+        font-size: 8px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 8px 10px;
+        font-size: 8px;
+        gap: 4px;
+    }
+
+    .btn i {
+        font-size: 8px;
+    }
+
+    .results-placeholder {
+        padding: 25px 12px;
+    }
+
+    .placeholder-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    .results-placeholder h4 {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+
+    .results-placeholder p {
+        font-size: 8px;
+    }
+
+    .result-section {
+        margin-bottom: 12px;
+    }
+
+    .result-section h4 {
+        font-size: 10px;
+        margin-bottom: 8px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .info-item .info-label {
+        font-size: 7px;
+    }
+
+    .info-item .info-value {
+        font-size: 8px;
+    }
+
+    .diagnosis-card {
+        padding: 10px;
+        gap: 8px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .diagnosis-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        margin: 0 auto;
+    }
+
+    .diagnosis-content h5 {
+        font-size: 10px;
+        margin-bottom: 2px;
+    }
+
+    .diagnosis-content p {
+        font-size: 8px;
+    }
+
+    .probability-cards {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .probability-card {
+        padding: 10px;
+    }
+
+    .probability-header {
+        margin-bottom: 12px;
+        gap: 8px;
+    }
+
+    .probability-header i {
+        font-size: 16px;
+    }
+
+    .probability-header h5 {
+        font-size: 9px;
+        margin: 0;
+    }
+
+    .probability-value {
+        font-size: 16px;
+        margin-bottom: 6px;
+    }
+
+    .probability-bar {
+        height: 6px;
+    }
+
+    .recommendations {
+        padding: 8px;
+    }
+
+    .recommendations p {
+        font-size: 8px;
+        line-height: 1.3;
+    }
+
+    .recommendations ul {
+        margin: 4px 0 0 14px;
+    }
+
+    .recommendations li {
+        font-size: 7px;
+        margin: 2px 0;
+    }
+
+    .result-actions {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .recent-list {
+        max-height: 200px;
+    }
+
+    .recent-item {
+        padding: 6px 8px;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .recent-name {
+        font-size: 8px;
+        margin-bottom: 0;
+    }
+
+    .recent-date {
+        font-size: 7px;
+    }
+
+    .recent-result {
+        font-size: 7px;
+        padding: 2px 6px;
+        align-self: flex-start;
+    }
+
+    .empty-recent {
+        padding: 18px 10px;
+    }
+
+    .empty-recent i {
+        font-size: 24px;
+        margin-bottom: 6px;
+    }
+
+    .empty-recent p {
+        font-size: 8px;
+    }
+}
+</style>
+
+<script>
+// DOM Elements
+const patientSelect = document.getElementById('patientSelect');
+const patientInfoCard = document.getElementById('patientInfoCard');
+const patientIdInput = document.getElementById('patientId');
+const predictBtn = document.getElementById('predictBtn');
+const clearBtn = document.getElementById('clearBtn');
+const predictionForm = document.getElementById('predictionForm');
+const resultsPlaceholder = document.getElementById('resultsPlaceholder');
+const resultsContent = document.getElementById('resultsContent');
+
+// Patient select change event
+patientSelect.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const patientId = this.value;
+    const patientName = selectedOption.getAttribute('data-name');
+    
+    if (patientId) {
+        // Fetch patient details
+        fetchPatientDetails(patientId);
+        
+        // Enable predict button
+        predictBtn.disabled = false;
+        
+        // Set patient ID in form
+        patientIdInput.value = patientId;
+    } else {
+        // Clear patient info
+        patientInfoCard.style.display = 'none';
+        predictBtn.disabled = true;
+        patientIdInput.value = '';
+    }
+});
+
+// Fetch patient details from server
+async function fetchPatientDetails(patientId) {
+    try {
+        const response = await fetch(`/api/patient/${patientId}`);
+        const data = await response.json();
+
+        
+        
+        if (data.success) {
+            const patient = data.patient;
+            
+            // Update patient info card
+            document.getElementById('infoName').textContent = patient.full_name;
+            document.getElementById('infoAge').textContent = `${patient.age} years`;
+            document.getElementById('infoGender').textContent = patient.gender;
+            document.getElementById('infoContact').textContent = patient.contact;
+            
+            // Show patient info card
+            patientInfoCard.style.display = 'block';
+            
+            // Update results section
+            document.getElementById('resultName').textContent = patient.full_name;
+            document.getElementById('resultId').textContent = patientId;
+            
+        } else {
+            alert('Patient not found');
+            patientInfoCard.style.display = 'none';
+            predictBtn.disabled = true;
+        }
+    } catch (error) {
+        console.error('Error fetching patient:', error);
+        alert('Error fetching patient data');
+    }
+}
+
+// Clear form
+clearBtn.addEventListener('click', function() {
+    // Reset form
+    patientSelect.selectedIndex = 0;
+    patientInfoCard.style.display = 'none';
+    predictBtn.disabled = true;
+    patientIdInput.value = '';
+    
+    // Reset all radio buttons to first option
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        if (radio.value === '0') {
+            radio.checked = true;
+        }
+    });
+    
+    // Reset results
+    resultsPlaceholder.style.display = 'block';
+    resultsContent.style.display = 'none';
+});
+
+// Form submission
+predictionForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const patientId = patientIdInput.value;
+    if (!patientId) {
+        alert('Please select a patient first');
+        return;
+    }
+    
+    // Disable predict button and show loading
+    predictBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Predicting...';
+    predictBtn.disabled = true;
+    
+    try {
+        // Collect form data
+        const formData = new FormData(this);
+        
+        // Send prediction request
+        const response = await fetch('/predict-endometriosis', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show results
+            showPredictionResults(data.prediction);
+            
+            // Update recent predictions
+            loadRecentPredictions();
+            
+            // Show success message
+            showNotification('Prediction completed successfully!', 'success');
+            
+        } else {
+            alert(data.message || 'Prediction failed');
+        }
+    } catch (error) {
+        console.error('Prediction error:', error);
+        alert('Error making prediction. Please try again.');
+    } finally {
+        // Restore predict button
+        predictBtn.innerHTML = '<i class="fas fa-brain"></i> Predict Endometriosis';
+        predictBtn.disabled = false;
+    }
+});
+
+// Show prediction results
+function showPredictionResults(prediction) {
+    // Hide placeholder, show results
+    resultsPlaceholder.style.display = 'none';
+    resultsContent.style.display = 'block';
+    
+    // Store prediction data for save
+    window.currentPrediction = prediction;
+    
+    // Update date
+    document.getElementById('resultDate').textContent = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+    
+    // Update diagnosis
+    const diagnosisCard = document.getElementById('diagnosisCard');
+    const diagnosisText = document.getElementById('diagnosisText');
+    const diagnosisConfidence = document.getElementById('diagnosisConfidence');
+    
+    diagnosisText.textContent = prediction.diagnosis;
+    diagnosisConfidence.textContent = `Confidence: ${prediction.confidence.toFixed(1)}%`;
+    
+    // Update diagnosis card style based on result
+    if (prediction.diagnosis === 'Endometriosis Detected') {
+        diagnosisCard.style.borderColor = '#dc3545';
+        diagnosisCard.querySelector('.diagnosis-icon').style.background = '#dc3545';
+    } else {
+        diagnosisCard.style.borderColor = '#28a745';
+        diagnosisCard.querySelector('.diagnosis-icon').style.background = '#28a745';
+    }
+    
+    // Update probabilities
+    const probNoEndo = prediction.probability_no_endo.toFixed(1);
+    const probEndo = prediction.probability_endo.toFixed(1);
+    
+    document.getElementById('probNoEndo').textContent = `${probNoEndo}%`;
+    document.getElementById('probEndo').textContent = `${probEndo}%`;
+    
+    // Animate probability bars
+    setTimeout(() => {
+        document.getElementById('probNoEndoFill').style.width = `${probNoEndo}%`;
+        document.getElementById('probEndoFill').style.width = `${probEndo}%`;
+    }, 100);
+    
+    // Update recommendations
+    updateRecommendations(prediction);
+}
+
+// Update recommendations based on prediction
+function updateRecommendations(prediction) {
+    const recommendations = document.getElementById('recommendations');
+    let html = '';
+    
+    if (prediction.diagnosis === 'Endometriosis Detected') {
+        html = `
+            <p><strong>Immediate Actions:</strong></p>
+            <ul>
+                <li>Consult with specialist gynecologist</li>
+                <li>Schedule ultrasound examination</li>
+                <li>Consider hormonal therapy evaluation</li>
+                <li>Pain management consultation</li>
+            </ul>
+            <p><strong>Follow-up:</strong></p>
+            <ul>
+                <li>Regular monitoring every 3-6 months</li>
+                <li>Maintain symptom diary</li>
+                <li>Consider lifestyle modifications</li>
+            </ul>
+        `;
+    } else {
+        html = `
+            <p><strong>Recommendations:</strong></p>
+            <ul>
+                <li>Routine annual check-up</li>
+                <li>Maintain healthy lifestyle</li>
+                <li>Monitor for any symptom changes</li>
+                <li>Regular exercise and balanced diet</li>
+            </ul>
+        `;
+    }
+    
+    recommendations.innerHTML = html;
+}
+
+// Load recent predictions
+async function loadRecentPredictions() {
+    try {
+        const response = await fetch('/api/recent-predictions');
+        const data = await response.json();
+        
+        if (data.success && data.predictions.length > 0) {
+            updateRecentList(data.predictions);
+        }
+    } catch (error) {
+        console.error('Error loading recent predictions:', error);
+    }
+}
+
+// Update recent predictions list
+function updateRecentList(predictions) {
+    const recentList = document.getElementById('recentList');
+    
+    if (predictions.length === 0) {
+        recentList.innerHTML = `
+            <div class="empty-recent">
+                <i class="fas fa-chart-line"></i>
+                <p>No recent predictions</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const items = predictions.map(pred => `
+        <div class="recent-item">
+            <div class="recent-info">
+                <div class="recent-name">${pred.patient_name}</div>
+                <div class="recent-date">${pred.created_at}</div>
+            </div>
+            <div class="recent-result ${pred.diagnosis === 'Endometriosis Detected' ? 'positive' : 'negative'}">
+                ${pred.diagnosis === 'Endometriosis Detected' ? 'Positive' : 'Negative'}
+            </div>
+        </div>
+    `).join('');
+    
+    recentList.innerHTML = items;
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    // Add to flash messages container
+    const flashContainer = document.querySelector('.flash-messages');
+    if (!flashContainer) {
+        // Create container if it doesn't exist
+        const container = document.createElement('div');
+        container.className = 'flash-messages';
+        container.appendChild(notification);
+        document.querySelector('.content-area').insertBefore(container, document.querySelector('.detection-container'));
+    } else {
+        flashContainer.appendChild(notification);
+    }
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Save button event
+document.getElementById('saveBtn').addEventListener('click', async function() {
+    const patientId = patientIdInput.value;
+    
+    if (!patientId || !window.currentPrediction) {
+        showNotification('No prediction data to save', 'danger');
+        return;
+    }
+    
+    try {
+        // Disable button and show loading
+        this.disabled = true;
+        const originalHtml = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        
+        const prediction = window.currentPrediction;
+        
+        const response = await fetch('/api/save-diagnosis', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                prediction_id: prediction.prediction_id || 0,
+                diagnosis: prediction.diagnosis,
+                confidence: prediction.confidence,
+                probability_endo: prediction.probability_endo,
+                probability_no_endo: prediction.probability_no_endo,
+                clinical_notes: '',
+                recommendations: document.getElementById('recommendations').innerHTML
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Diagnosis saved to database successfully!', 'success');
+            // Reset form after 2 seconds
+            setTimeout(() => {
+                clearBtn.click();
+            }, 2000);
+        } else {
+            showNotification(data.message || 'Failed to save diagnosis', 'danger');
+        }
+    } catch (error) {
+        console.error('Save diagnosis error:', error);
+        showNotification('Error saving diagnosis. Please try again.', 'danger');
+    } finally {
+        // Restore button
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-save"></i> Save Diagnosis';
+    }
+});
+
+// New prediction button event
+document.getElementById('newBtn').addEventListener('click', function() {
+    clearBtn.click();
+    document.getElementById('patientSelect').focus();
+});
+
+// Load recent predictions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadRecentPredictions();
+});
+</script>
+{% endblock %}

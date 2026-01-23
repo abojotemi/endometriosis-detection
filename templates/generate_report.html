@@ -1,0 +1,1586 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-area">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="header-text">
+                <h2>Generate Report</h2>
+                <p>Create and export diagnosis detection reports</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div class="flash-messages" id="flashContainer"></div>
+
+    <div class="report-container">
+        <!-- Left Panel: Report Configuration -->
+        <div class="report-config">
+            <div class="config-card">
+                <h3><i class="fas fa-sliders-h"></i> Report Settings</h3>
+                
+                <div class="form-group">
+                    <label for="reportType">Report Type *</label>
+                    <div class="radio-group-vertical">
+                        <label class="radio-label">
+                            <input type="radio" name="reportType" value="weekly" checked>
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Weekly Report (Last 7 days)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="reportType" value="monthly">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Monthly Report (Last 30 days)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="reportType" value="custom">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Custom Date Range</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="customDateGroup" style="display: none;">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" class="form-control">
+                </div>
+                
+                <div class="form-group" id="endDateGroup" style="display: none;">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" class="form-control">
+                </div>
+                
+                <button class="btn btn-primary" id="previewBtn" style="width: 100%;">
+                    <i class="fas fa-eye"></i> Preview Report
+                </button>
+            </div>
+
+            <div class="config-card">
+                <h3><i class="fas fa-download"></i> Export Options</h3>
+                
+                <button class="btn btn-export btn-csv" id="exportCsvBtn" disabled>
+                    <i class="fas fa-file-csv"></i> Export as CSV
+                </button>
+                
+                <button class="btn btn-export btn-excel" id="exportExcelBtn" disabled>
+                    <i class="fas fa-file-excel"></i> Export as Excel
+                </button>
+                
+                <button class="btn btn-export btn-pdf" id="exportPdfBtn" disabled>
+                    <i class="fas fa-file-pdf"></i> Export as PDF
+                </button>
+                
+                <button class="btn btn-export btn-print" id="printBtn" disabled>
+                    <i class="fas fa-print"></i> Print (A4)
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Report Preview -->
+        <div class="report-preview">
+            <div class="preview-card">
+                <h3><i class="fas fa-file-alt"></i> Report Preview</h3>
+                
+                <div class="preview-placeholder" id="previewPlaceholder">
+                    <div class="placeholder-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h4>No Report Generated</h4>
+                    <p>Click "Preview Report" to generate report data</p>
+                </div>
+                
+                <div class="preview-content" id="previewContent" style="display: none;">
+                    <!-- Statistics Section -->
+                    <div class="stats-section">
+                        <h4>Report Statistics</h4>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Total Diagnoses</div>
+                                <div class="stat-value" id="statTotal">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Positive Cases</div>
+                                <div class="stat-value positive" id="statPositive">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Negative Cases</div>
+                                <div class="stat-value negative" id="statNegative">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Avg Confidence</div>
+                                <div class="stat-value" id="statConfidence">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Section -->
+                    <div class="chart-section">
+                        <h4>Diagnosis Breakdown</h4>
+                        <div class="chart-container">
+                            <canvas id="diagnosisChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Breakdown -->
+                    <div class="status-section">
+                        <h4>Status Distribution</h4>
+                        <div class="status-breakdown">
+                            <div class="status-item">
+                                <span class="status-label">Active:</span>
+                                <span class="status-count" id="statusActive">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Reviewed:</span>
+                                <span class="status-count" id="statusReviewed">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Archived:</span>
+                                <span class="status-count" id="statusArchived">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Table -->
+                    <div class="table-section">
+                        <h4>Detailed Records</h4>
+                        <div class="table-wrapper">
+                            <table class="preview-table" id="previewTable">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Diagnosis</th>
+                                        <th>Confidence</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Template (Hidden) -->
+    <div class="print-template" id="printTemplate">
+        <div class="print-header">
+            <h1>Endometriosis Detection Report</h1>
+            <p class="print-date" id="printDate"></p>
+        </div>
+        
+        <div class="print-section">
+            <h2>Report Statistics</h2>
+            <table class="print-stats-table">
+                <tr>
+                    <td class="stat-label">Total Diagnoses:</td>
+                    <td class="stat-value" id="printTotal">-</td>
+                </tr>
+                <tr>
+                    <td class="stat-label">Positive Cases:</td>
+                    <td class="stat-value" id="printPositive">-</td>
+                </tr>
+                <tr>
+                    <td class="stat-label">Negative Cases:</td>
+                    <td class="stat-value" id="printNegative">-</td>
+                </tr>
+                <tr>
+                    <td class="stat-label">Average Confidence:</td>
+                    <td class="stat-value" id="printConfidence">-</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="print-section">
+            <h2>Detailed Records</h2>
+            <table class="print-data-table">
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Patient ID</th>
+                        <th>Diagnosis</th>
+                        <th>Confidence</th>
+                        <th>Positive %</th>
+                        <th>Negative %</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="printTableBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="print-footer">
+            <p>Generated on <span id="footerDate"></span></p>
+            <p>This report is confidential and intended for medical professionals only.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ================= BASE STYLES ================= */
+.content-area {
+    padding: 20px;
+    background: #f5f5f5;
+    min-height: calc(100vh - 150px);
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    font-size: 11px;
+    color: #333;
+}
+
+/* ================= PAGE HEADER ================= */
+.page-header {
+    background: white;
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    border: 1px solid #e0e0e0;
+}
+
+.header-icon {
+    width: 50px;
+    height: 50px;
+    background: #2864bd;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    margin-right: 15px;
+}
+
+.header-text h2 {
+    color: #222;
+    font-size: 18px;
+    margin: 0 0 4px 0;
+    font-weight: 600;
+}
+
+.header-text p {
+    color: #777;
+    font-size: 11px;
+    margin: 0;
+}
+
+/* ================= REPORT CONTAINER ================= */
+.report-container {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 20px;
+}
+
+/* ================= CONFIG CARD ================= */
+.config-card {
+    background: white;
+    border-radius: 6px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+}
+
+.config-card h3 {
+    color: #222;
+    font-size: 14px;
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.config-card h3 i {
+    color: #2864bd;
+}
+
+/* ================= FORM STYLES ================= */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #333;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Roboto', Arial, sans-serif;
+    transition: all 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #2864bd;
+    box-shadow: 0 0 0 3px rgba(40, 100, 189, 0.1);
+}
+
+/* ================= RADIO BUTTONS ================= */
+.radio-group-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.radio-label:hover {
+    background: #f8f9fa;
+}
+
+.radio-label input {
+    display: none;
+}
+
+.radio-custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.radio-label input:checked + .radio-custom {
+    border-color: #2864bd;
+    background: #2864bd;
+}
+
+.radio-label input:checked + .radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+}
+
+.radio-text {
+    color: #333;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+/* ================= BUTTONS ================= */
+.btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    font-family: 'Roboto', Arial, sans-serif;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.btn:last-child {
+    margin-bottom: 0;
+}
+
+.btn-primary {
+    background: #2864bd;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1d4a8a;
+}
+
+.btn-primary:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.btn-export {
+    background: white;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.btn-export:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #999;
+}
+
+.btn-export:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-csv { border-left: 3px solid #17a2b8; }
+.btn-excel { border-left: 3px solid #28a745; }
+.btn-pdf { border-left: 3px solid #dc3545; }
+.btn-print { border-left: 3px solid #ffc107; }
+
+/* ================= PREVIEW CARD ================= */
+.preview-card {
+    background: white;
+    border-radius: 6px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+}
+
+.preview-card h3 {
+    color: #222;
+    font-size: 14px;
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.preview-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.placeholder-icon {
+    font-size: 48px;
+    color: #ddd;
+    margin-bottom: 15px;
+}
+
+.preview-placeholder h4 {
+    color: #666;
+    font-size: 14px;
+    margin: 10px 0 5px 0;
+}
+
+.preview-placeholder p {
+    color: #999;
+    font-size: 12px;
+}
+
+/* ================= PREVIEW CONTENT ================= */
+.preview-content {
+    max-height: 800px;
+    overflow-y: auto;
+}
+
+/* ================= STATS SECTION ================= */
+.stats-section {
+    margin-bottom: 20px;
+}
+
+.stats-section h4 {
+    color: #333;
+    font-size: 13px;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.stat-box {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px;
+    text-align: center;
+}
+
+.stat-label {
+    color: #777;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    color: #2864bd;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.stat-value.positive {
+    color: #28a745;
+}
+
+.stat-value.negative {
+    color: #dc3545;
+}
+
+/* ================= CHART SECTION ================= */
+.chart-section {
+    margin-bottom: 20px;
+}
+
+.chart-section h4 {
+    color: #333;
+    font-size: 13px;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.chart-container {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    height: 300px;
+}
+
+/* ================= STATUS SECTION ================= */
+.status-section {
+    margin-bottom: 20px;
+}
+
+.status-section h4 {
+    color: #333;
+    font-size: 13px;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.status-breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.status-item {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+}
+
+.status-label {
+    display: block;
+    color: #777;
+    font-size: 10px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.status-count {
+    display: block;
+    color: #2864bd;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+/* ================= TABLE SECTION ================= */
+.table-section {
+    margin-top: 20px;
+}
+
+.table-section h4 {
+    color: #333;
+    font-size: 13px;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.preview-table thead {
+    background: #f9f9f9;
+    border-bottom: 1px solid #ddd;
+}
+
+.preview-table th {
+    padding: 8px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+}
+
+.preview-table td {
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #666;
+}
+
+.preview-table tbody tr:hover {
+    background: #fafafa;
+}
+
+/* ================= FLASH MESSAGES ================= */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.flash-message {
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    animation: slideIn 0.3s ease-in;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.flash-success {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.flash-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.flash-warning {
+    background: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+/* ================= PRINT STYLES ================= */
+.print-template {
+    display: none;
+}
+
+@media print {
+    * {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .content-area > *:not(.print-template) {
+        display: none;
+    }
+    
+    .print-template {
+        display: block;
+        padding: 20px;
+    }
+    
+    .print-header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #2864bd;
+        padding-bottom: 15px;
+    }
+    
+    .print-header h1 {
+        color: #2864bd;
+        font-size: 24px;
+        margin: 0 0 10px 0;
+    }
+    
+    .print-date {
+        color: #777;
+        font-size: 12px;
+        margin: 0;
+    }
+    
+    .print-section {
+        margin-bottom: 30px;
+        page-break-inside: avoid;
+    }
+    
+    .print-section h2 {
+        color: #2864bd;
+        font-size: 16px;
+        margin: 0 0 15px 0;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 8px;
+    }
+    
+    .print-stats-table {
+        width: 100%;
+        margin-bottom: 15px;
+        border-collapse: collapse;
+    }
+    
+    .print-stats-table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .print-stats-table .stat-label {
+        font-weight: bold;
+        width: 40%;
+    }
+    
+    .print-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px;
+    }
+    
+    .print-data-table thead {
+        background: #f0f0f0;
+    }
+    
+    .print-data-table th {
+        padding: 8px;
+        border: 1px solid #999;
+        font-weight: bold;
+        text-align: left;
+    }
+    
+    .print-data-table td {
+        padding: 6px;
+        border: 1px solid #999;
+    }
+    
+    .print-footer {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 10px;
+        color: #777;
+        border-top: 1px solid #ddd;
+        padding-top: 15px;
+    }
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1024px) {
+    .content-area {
+        padding: 18px 15px;
+    }
+
+    .page-header {
+        padding: 20px;
+        gap: 15px;
+    }
+
+    .header-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
+
+    .header-text h2 {
+        font-size: 20px;
+    }
+
+    .header-text p {
+        font-size: 11px;
+    }
+
+    .report-container {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .config-card,
+    .preview-card {
+        padding: 18px;
+    }
+
+    .form-group label {
+        font-size: 11px;
+    }
+
+    .form-control {
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+
+    .btn {
+        padding: 8px 14px;
+        font-size: 11px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+
+    .status-breakdown {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        padding: 15px 12px;
+    }
+
+    .page-header {
+        flex-direction: column;
+        padding: 18px 16px;
+        gap: 12px;
+        margin-bottom: 18px;
+        border-radius: 10px;
+    }
+
+    .header-content {
+        gap: 12px;
+        width: 100%;
+    }
+
+    .header-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+
+    .header-text h2 {
+        font-size: 18px;
+    }
+
+    .header-text p {
+        font-size: 10px;
+    }
+
+    .report-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .report-config,
+    .report-preview {
+        gap: 12px;
+    }
+
+    .config-card,
+    .preview-card {
+        padding: 16px 14px;
+        border-radius: 10px;
+    }
+
+    .config-card h3,
+    .preview-card h3 {
+        font-size: 14px;
+        margin-bottom: 12px;
+        gap: 8px;
+    }
+
+    .config-card h3 i,
+    .preview-card h3 i {
+        font-size: 14px;
+    }
+
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .form-group label {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+
+    .radio-label {
+        font-size: 10px;
+        margin-bottom: 8px;
+        padding: 6px 8px;
+    }
+
+    .radio-custom {
+        width: 18px;
+        height: 18px;
+    }
+
+    .form-control {
+        padding: 7px 8px;
+        font-size: 10px;
+    }
+
+    .btn {
+        padding: 8px 12px;
+        font-size: 10px;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .btn-export {
+        margin-bottom: 8px;
+    }
+
+    .placeholder-icon {
+        font-size: 44px;
+        margin-bottom: 12px;
+    }
+
+    .placeholder-icon i {
+        font-size: 40px;
+    }
+
+    .preview-placeholder h4 {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .preview-placeholder p {
+        font-size: 10px;
+    }
+
+    .stats-section {
+        margin-bottom: 20px;
+    }
+
+    .stats-section h4 {
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .stat-card {
+        padding: 14px;
+    }
+
+    .stat-card h5 {
+        font-size: 11px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .status-breakdown {
+        grid-template-columns: 1fr;
+    }
+
+    .status-item {
+        padding: 12px;
+    }
+
+    .status-item h6 {
+        font-size: 10px;
+    }
+
+    .status-value {
+        font-size: 18px;
+    }
+
+    .status-percentage {
+        font-size: 10px;
+    }
+
+    .diagnosis-summary {
+        margin-top: 20px;
+    }
+
+    .diagnosis-summary h4 {
+        font-size: 13px;
+    }
+
+    .summary-table {
+        font-size: 9px;
+    }
+
+    .summary-table th,
+    .summary-table td {
+        padding: 8px;
+    }
+
+    .report-footer {
+        padding: 12px;
+        text-align: center;
+        margin-top: 20px;
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 12px 10px;
+    }
+
+    .page-header {
+        padding: 14px 12px;
+        margin-bottom: 14px;
+        border-radius: 8px;
+    }
+
+    .header-content {
+        gap: 10px;
+    }
+
+    .header-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .header-text h2 {
+        font-size: 15px;
+        margin-bottom: 4px;
+    }
+
+    .header-text p {
+        font-size: 8px;
+    }
+
+    .report-container {
+        gap: 12px;
+    }
+
+    .report-config,
+    .report-preview {
+        gap: 10px;
+    }
+
+    .config-card,
+    .preview-card {
+        padding: 12px 10px;
+        border-radius: 8px;
+    }
+
+    .config-card h3,
+    .preview-card h3 {
+        font-size: 12px;
+        margin-bottom: 10px;
+        gap: 6px;
+    }
+
+    .config-card h3 i,
+    .preview-card h3 i {
+        font-size: 12px;
+    }
+
+    .form-group {
+        margin-bottom: 10px;
+    }
+
+    .form-group label {
+        font-size: 9px;
+        margin-bottom: 4px;
+    }
+
+    .radio-label {
+        font-size: 8px;
+        margin-bottom: 6px;
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .radio-custom {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+    }
+
+    .radio-text {
+        font-size: 8px;
+    }
+
+    .form-control {
+        padding: 6px 7px;
+        font-size: 8px;
+    }
+
+    .btn {
+        padding: 8px 10px;
+        font-size: 8px;
+        width: 100%;
+        margin-bottom: 6px;
+        border-radius: 6px;
+    }
+
+    .btn i {
+        font-size: 8px;
+    }
+
+    .placeholder-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+
+    .placeholder-icon i {
+        font-size: 28px;
+    }
+
+    .preview-placeholder h4 {
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    .preview-placeholder p {
+        font-size: 8px;
+    }
+
+    .stats-section {
+        margin-bottom: 16px;
+    }
+
+    .stats-section h4 {
+        font-size: 11px;
+        margin-bottom: 10px;
+    }
+
+    .stats-grid {
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 12px;
+    }
+
+    .stat-card h5 {
+        font-size: 9px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
+
+    .status-item {
+        padding: 10px;
+    }
+
+    .status-item h6 {
+        font-size: 8px;
+        margin-bottom: 4px;
+    }
+
+    .status-value {
+        font-size: 16px;
+    }
+
+    .status-percentage {
+        font-size: 8px;
+    }
+
+    .diagnosis-summary {
+        margin-top: 16px;
+    }
+
+    .diagnosis-summary h4 {
+        font-size: 11px;
+        margin-bottom: 10px;
+    }
+
+    .summary-table {
+        font-size: 7px;
+    }
+
+    .summary-table th,
+    .summary-table td {
+        padding: 5px;
+    }
+
+    .report-footer {
+        padding: 10px;
+        font-size: 7px;
+        margin-top: 16px;
+    }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let currentReportData = null;
+let diagnosisChart = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+});
+
+// Setup event listeners
+function setupEventListeners() {
+    // Report type change
+    document.querySelectorAll('input[name="reportType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            toggleCustomDateFields();
+        });
+    });
+    
+    // Preview button
+    document.getElementById('previewBtn').addEventListener('click', previewReport);
+    
+    // Export buttons
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+    document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+    document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+    document.getElementById('printBtn').addEventListener('click', printReport);
+}
+
+// Toggle custom date fields
+function toggleCustomDateFields() {
+    const reportType = document.querySelector('input[name="reportType"]:checked').value;
+    const customDateGroup = document.getElementById('customDateGroup');
+    const endDateGroup = document.getElementById('endDateGroup');
+    
+    if (reportType === 'custom') {
+        customDateGroup.style.display = 'block';
+        endDateGroup.style.display = 'block';
+    } else {
+        customDateGroup.style.display = 'none';
+        endDateGroup.style.display = 'none';
+    }
+}
+
+// Preview report
+async function previewReport() {
+    try {
+        const reportType = document.querySelector('input[name="reportType"]:checked').value;
+        let startDate = null;
+        let endDate = null;
+        
+        if (reportType === 'custom') {
+            startDate = document.getElementById('startDate').value;
+            endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                showFlashMessage('Please select both start and end dates', 'warning');
+                return;
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                showFlashMessage('Start date must be before end date', 'warning');
+                return;
+            }
+        }
+        
+        // Show loading state
+        const previewBtn = document.getElementById('previewBtn');
+        previewBtn.disabled = true;
+        previewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+        
+        // Fetch data
+        const response = await fetch('/api/report-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                report_type: reportType,
+                start_date: startDate,
+                end_date: endDate
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentReportData = data;
+            displayReport(data);
+            enableExportButtons();
+            showFlashMessage('Report generated successfully!', 'success');
+        } else {
+            showFlashMessage(data.message || 'Failed to generate report', 'danger');
+        }
+    } catch (error) {
+        console.error('Preview error:', error);
+        showFlashMessage('Error generating report preview', 'danger');
+    } finally {
+        const previewBtn = document.getElementById('previewBtn');
+        previewBtn.disabled = false;
+        previewBtn.innerHTML = '<i class="fas fa-eye"></i> Preview Report';
+    }
+}
+
+// Display report data
+function displayReport(data) {
+    const placeholder = document.getElementById('previewPlaceholder');
+    const content = document.getElementById('previewContent');
+    
+    placeholder.style.display = 'none';
+    content.style.display = 'block';
+    
+    // Update statistics
+    const stats = data.statistics;
+    document.getElementById('statTotal').textContent = stats.total_diagnoses;
+    document.getElementById('statPositive').textContent = stats.positive_count;
+    document.getElementById('statNegative').textContent = stats.negative_count;
+    document.getElementById('statConfidence').textContent = stats.average_confidence + '%';
+    
+    // Update status breakdown
+    document.getElementById('statusActive').textContent = stats.status_breakdown.active;
+    document.getElementById('statusReviewed').textContent = stats.status_breakdown.reviewed;
+    document.getElementById('statusArchived').textContent = stats.status_breakdown.archived;
+    
+    // Update chart
+    updateChart(stats.positive_count, stats.negative_count);
+    
+    // Update table
+    updateTable(data.records);
+    
+    // Update print template
+    updatePrintTemplate(data);
+}
+
+// Update chart
+function updateChart(positive, negative) {
+    const ctx = document.getElementById('diagnosisChart');
+    
+    if (diagnosisChart) {
+        diagnosisChart.destroy();
+    }
+    
+    diagnosisChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Positive Cases', 'Negative Cases'],
+            datasets: [{
+                data: [positive, negative],
+                backgroundColor: ['#dc3545', '#28a745'],
+                borderColor: ['#ffffff', '#ffffff'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Update table
+function updateTable(records) {
+    const tbody = document.getElementById('tableBody');
+    
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #999;">No records found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = records.map(record => `
+        <tr>
+            <td>${record.patient_name}</td>
+            <td>
+                <span class="diagnosis-badge ${record.diagnosis_text.includes('Detected') ? 'positive' : 'negative'}">
+                    ${record.diagnosis_text}
+                </span>
+            </td>
+            <td>${record.confidence_score.toFixed(1)}%</td>
+            <td><span class="status-badge">${record.status}</span></td>
+            <td>${new Date(record.created_at).toLocaleDateString()}</td>
+        </tr>
+    `).join('');
+}
+
+// Update print template
+function updatePrintTemplate(data) {
+    const stats = data.statistics;
+    const date = new Date().toLocaleString();
+    
+    // Update header
+    document.getElementById('printDate').textContent = date;
+    document.getElementById('footerDate').textContent = date;
+    
+    // Update statistics
+    document.getElementById('printTotal').textContent = stats.total_diagnoses;
+    document.getElementById('printPositive').textContent = stats.positive_count;
+    document.getElementById('printNegative').textContent = stats.negative_count;
+    document.getElementById('printConfidence').textContent = stats.average_confidence.toFixed(2) + '%';
+    
+    // Update table
+    const printTableBody = document.getElementById('printTableBody');
+    printTableBody.innerHTML = data.records.map(record => `
+        <tr>
+            <td>${record.patient_name}</td>
+            <td>${record.patient_id}</td>
+            <td>${record.diagnosis_text}</td>
+            <td>${record.confidence_score.toFixed(1)}%</td>
+            <td>${(record.probability_positive * 100).toFixed(1)}%</td>
+            <td>${(record.probability_negative * 100).toFixed(1)}%</td>
+            <td>${record.status}</td>
+            <td>${new Date(record.created_at).toLocaleDateString()}</td>
+        </tr>
+    `).join('');
+}
+
+// Enable export buttons
+function enableExportButtons() {
+    document.getElementById('exportCsvBtn').disabled = false;
+    document.getElementById('exportExcelBtn').disabled = false;
+    document.getElementById('exportPdfBtn').disabled = false;
+    document.getElementById('printBtn').disabled = false;
+}
+
+// Export as CSV
+async function exportCsv() {
+    await exportReport('csv');
+}
+
+// Export as Excel
+async function exportExcel() {
+    await exportReport('excel');
+}
+
+// Export as PDF
+async function exportPdf() {
+    await exportReport('pdf');
+}
+
+// Generic export function
+async function exportReport(format) {
+    try {
+        if (!currentReportData) {
+            showFlashMessage('Please generate a report first', 'warning');
+            return;
+        }
+        
+        const reportType = document.querySelector('input[name="reportType"]:checked').value;
+        let startDate = null;
+        let endDate = null;
+        
+        if (reportType === 'custom') {
+            startDate = document.getElementById('startDate').value;
+            endDate = document.getElementById('endDate').value;
+        }
+        
+        const endpoint = `/api/export-${format}`;
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                report_type: reportType,
+                start_date: startDate,
+                end_date: endDate
+            })
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            showFlashMessage(data.message || `Failed to export as ${format}`, 'danger');
+            return;
+        }
+        
+        // Download file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `diagnosis_report_${new Date().getTime()}.${format === 'excel' ? 'xlsx' : format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showFlashMessage(`Report exported as ${format.toUpperCase()} successfully!`, 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        showFlashMessage(`Error exporting as ${format}`, 'danger');
+    }
+}
+
+// Print report
+function printReport() {
+    if (!currentReportData) {
+        showFlashMessage('Please generate a report first', 'warning');
+        return;
+    }
+    
+    window.print();
+}
+
+// Show flash message
+function showFlashMessage(message, type = 'info') {
+    const container = document.getElementById('flashContainer');
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'exclamation-triangle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Add diagnosis badge styles
+const style = document.createElement('style');
+style.textContent = `
+    .diagnosis-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 500;
+    }
+    
+    .diagnosis-badge.positive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .diagnosis-badge.negative {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 9px;
+        font-weight: 500;
+        background: #cfe2ff;
+        color: #084298;
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

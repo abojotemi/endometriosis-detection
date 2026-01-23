@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* ================= DASHBOARD STYLES ================= */
+    .dashboard-container {
+        padding: 30px 25px;
+        font-family: 'Roboto', sans-serif;
+        font-size: 11px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+    }
+
+    .dashboard-header {
+        margin-bottom: 35px;
+        animation: slideInDown 0.6s ease;
+    }
+
+    .dashboard-header h1 {
+        font-size: 28px;
+        color: #2c3e50;
+        font-weight: 700;
+        margin: 0;
+        padding-bottom: 8px;
+        border-bottom: 3px solid #4c77b4;
+        display: inline-block;
+    }
+
+    .dashboard-header p {
+        font-size: 12px;
+        color: #7f8c8d;
+        margin: 8px 0 0 0;
+    }
+
+    /* ================= STATS GRID ================= */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+
+    @media (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+    }
+
+    /* ================= STAT CARD ================= */
+    .stat-card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 16px;
+        padding: 28px 24px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.08),
+            0 2px 8px rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+        animation: fadeInUp 0.6s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 
+            0 16px 48px rgba(0, 0, 0, 0.12),
+            0 4px 12px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.85);
+    }
+
+    /* Background gradient for each card */
+    .stat-card.patients {
+        position: relative;
+    }
+
+    .stat-card.patients::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(135deg, rgba(76, 119, 180, 0.1) 0%, rgba(76, 119, 180, 0.05) 100%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .stat-card.diagnosis {
+        position: relative;
+    }
+
+    .stat-card.diagnosis::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(52, 152, 219, 0.05) 100%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .stat-card.positive {
+        position: relative;
+    }
+
+    .stat-card.positive::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(46, 204, 113, 0.05) 100%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .stat-card.negative {
+        position: relative;
+    }
+
+    .stat-card.negative::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(231, 76, 60, 0.05) 100%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .stat-card-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-info {
+        flex: 1;
+    }
+
+    .stat-label {
+        font-size: 11px;
+        color: #7f8c8d;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .stat-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .stat-icon {
+        font-size: 48px;
+        margin-left: 15px;
+        opacity: 0.8;
+        transition: all 0.4s ease;
+    }
+
+    .stat-card:hover .stat-icon {
+        transform: scale(1.15) rotate(5deg);
+        opacity: 1;
+    }
+
+    /* Icon colors */
+    .stat-card.patients .stat-icon {
+        color: #4c77b4;
+    }
+
+    .stat-card.diagnosis .stat-icon {
+        color: #3498db;
+    }
+
+    .stat-card.positive .stat-icon {
+        color: #2ecc71;
+    }
+
+    .stat-card.negative .stat-icon {
+        color: #e74c3c;
+    }
+
+    /* ================= ANIMATIONS ================= */
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-card:nth-child(1) {
+        animation: fadeInUp 0.6s ease 0.1s both;
+    }
+
+    .stat-card:nth-child(2) {
+        animation: fadeInUp 0.6s ease 0.2s both;
+    }
+
+    .stat-card:nth-child(3) {
+        animation: fadeInUp 0.6s ease 0.3s both;
+    }
+
+    .stat-card:nth-child(4) {
+        animation: fadeInUp 0.6s ease 0.4s both;
+    }
+
+    /* ================= WELCOME SECTION ================= */
+    .welcome-section {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 16px;
+        padding: 28px 24px;
+        margin-bottom: 40px;
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.08),
+            0 2px 8px rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        animation: fadeInUp 0.6s ease;
+    }
+
+    .welcome-section h2 {
+        font-size: 18px;
+        color: #2c3e50;
+        font-weight: 600;
+        margin: 0 0 12px 0;
+    }
+
+    .welcome-section p {
+        font-size: 11px;
+        color: #7f8c8d;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    /* ================= QUICK ACTIONS ================= */
+    .quick-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        font-size: 11px;
+        font-weight: 600;
+        color: white;
+        background: linear-gradient(135deg, #4c77b4 0%, #3a5fa0 100%);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(76, 119, 180, 0.3);
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(76, 119, 180, 0.4);
+    }
+
+    .action-btn i {
+        font-size: 11px;
+    }
+
+    /* ================= RESPONSIVE ADJUSTMENTS ================= */
+    @media (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .dashboard-container {
+            padding: 20px 15px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 24px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+        }
+
+        .stat-icon {
+            font-size: 44px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 20px 15px;
+            margin-top: 10px;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        .dashboard-header {
+            margin-bottom: 25px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 20px;
+            border-bottom: 2px solid #4c77b4;
+            padding-bottom: 8px;
+        }
+
+        .dashboard-header p {
+            font-size: 11px;
+        }
+
+        .stat-card {
+            padding: 20px 18px;
+        }
+
+        .stat-card-content {
+            flex-direction: row;
+        }
+
+        .stat-value {
+            font-size: 28px;
+        }
+
+        .stat-icon {
+            font-size: 38px;
+            margin-left: 12px;
+        }
+
+        .welcome-section {
+            padding: 18px 14px;
+            margin-bottom: 25px;
+        }
+
+        .welcome-section h2 {
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+            font-size: 10px;
+        }
+
+        .quick-actions {
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            padding: 8px 12px;
+            font-size: 10px;
+            gap: 6px;
+        }
+
+        .action-btn i {
+            font-size: 10px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dashboard-container {
+            padding: 15px 12px;
+            margin-top: 8px;
+        }
+
+        .dashboard-header {
+            margin-bottom: 20px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 16px;
+            border-bottom: 2px solid #4c77b4;
+            padding-bottom: 6px;
+        }
+
+        .dashboard-header p {
+            font-size: 10px;
+            margin-top: 6px;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            padding: 16px 14px;
+        }
+
+        .stat-card-content {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .stat-info {
+            margin-bottom: 10px;
+        }
+
+        .stat-icon {
+            margin-left: 0;
+            margin-top: 8px;
+            font-size: 32px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            margin-bottom: 6px;
+        }
+
+        .welcome-section {
+            padding: 15px 12px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+        }
+
+        .welcome-section h2 {
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .welcome-section p {
+            font-size: 9px;
+            line-height: 1.4;
+        }
+
+        .quick-actions {
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .action-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 10px 12px;
+            font-size: 9px;
+            gap: 6px;
+        }
+
+        .action-btn i {
+            font-size: 9px;
+        }
+
+        .stat-card:nth-child(1),
+        .stat-card:nth-child(2),
+        .stat-card:nth-child(3),
+        .stat-card:nth-child(4) {
+            animation: fadeInUp 0.6s ease both;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <h1><i class="fas fa-heartbeat"></i> Clinical Dashboard</h1>
+        <p>Welcome back, <strong>Dr. {{ current_user.full_name }}</strong>! Monitor your endometriosis detection performance and patient care metrics.</p>
+    </div>
+
+    <!-- Welcome & Quick Actions Section -->
+    <div class="welcome-section">
+        <h2><i class="fas fa-microscope"></i> Quick Actions</h2>
+        <p>Streamline your workflow with quick access to essential functions. Add new patients, manage existing records, run diagnostic tests, and review your prediction history.</p>
+        <div class="quick-actions">
+            <a href="{{ url_for('doctor.create_patient') }}" class="action-btn">
+                <i class="fas fa-plus"></i> Add Patient
+            </a>
+            <a href="{{ url_for('doctor.manage_patients') }}" class="action-btn">
+                <i class="fas fa-users"></i> Manage Patients
+            </a>
+            <a href="{{ url_for('doctor.detect_endometriosis') }}" class="action-btn">
+                <i class="fas fa-stethoscope"></i> Run Diagnosis
+            </a>
+            <a href="{{ url_for('doctor.diagnosis_records') }}" class="action-btn">
+                <i class="fas fa-file-medical"></i> View Records
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Grid -->
+    <div class="stats-grid">
+        <!-- Total Patients Card -->
+        <div class="stat-card patients">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <span class="stat-label">Patient Records</span>
+                    <p class="stat-value">{{ total_patients }}</p>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-user-md"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Diagnosis Card -->
+        <div class="stat-card diagnosis">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <span class="stat-label">Assessments Completed</span>
+                    <p class="stat-value">{{ total_diagnosis }}</p>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Positive Diagnosis Card -->
+        <div class="stat-card positive">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <span class="stat-label">Positive Findings</span>
+                    <p class="stat-value">{{ total_positive }}</p>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-hospital-alt"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Negative Diagnosis Card -->
+        <div class="stat-card negative">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <span class="stat-label">Negative Findings</span>
+                    <p class="stat-value">{{ total_negative }}</p>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

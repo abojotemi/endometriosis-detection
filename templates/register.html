@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Account</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Background image styling */
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            font-size: 11px;
+            background: #a3d6a3;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("{{ url_for('static', filename='images/bg-img5.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: -2;
+        }
+        
+        /* Overlay for better readability */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: hidden;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+        
+        /* Update container styling */
+        .container {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Input icons styling */
+        .input-with-icon {
+            position: relative;
+            margin: 15px 0;
+        }
+        
+        .input-with-icon i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: darkorange;
+            font-size: 16px;
+            z-index: 2;
+        }
+        
+        .input-with-icon input {
+            width: 100%;
+            padding: 12px 12px 12px 45px;
+            border-radius: 20px;
+            border: none;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        
+        /* Modern glassy white background for right panel */
+        .right-panel {
+            width: 50%;
+            padding: 60px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #2864bd;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 
+                inset 0 0 20px rgba(255, 255, 255, 0.8),
+                0 8px 32px rgba(31, 38, 135, 0.15);
+        }
+        
+        /* Update button to match new color scheme */
+        .right-panel button {
+            width: 100%;
+            padding: 12px;
+            background: #2864bd;
+            color: white;
+            border-radius: 20px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .right-panel button:hover {
+            background: #1d4a8a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 100, 189, 0.3);
+        }
+        
+        /* Update links color */
+        .right-panel a {
+            color: #2864bd;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .right-panel a:hover {
+            color: darkorange;
+            text-decoration: underline;
+        }
+        
+        /* Update input styling for new background */
+        .right-panel input {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(40, 100, 189, 0.2);
+            color: #333;
+            transition: all 0.3s ease;
+        }
+        
+        .right-panel input:focus {
+            outline: none;
+            border-color: #2864bd;
+            box-shadow: 0 0 0 3px rgba(40, 100, 189, 0.1);
+        }
+        
+        /* Improve text contrast */
+        .left-panel h1, .left-panel p {
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .container {
+                width: 90%;
+                margin: 30px auto;
+            }
+            
+            .left-panel, .right-panel {
+                padding: 40px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                width: 85%;
+                margin: 20px auto;
+            }
+            
+            .left-panel, .right-panel {
+                width: 100%;
+                padding: 30px;
+            }
+            
+            .left-panel {
+                padding-bottom: 20px;
+            }
+            
+            .right-panel {
+                padding-top: 20px;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            h2 {
+                font-size: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                width: 92%;
+                margin: 15px auto;
+                border-radius: 15px;
+            }
+            
+            .left-panel, .right-panel {
+                padding: 25px 20px;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
+            
+            h2 {
+                font-size: 18px;
+            }
+            
+            .input-with-icon input {
+                padding: 10px 10px 10px 40px;
+                font-size: 13px;
+            }
+            
+            .input-with-icon i {
+                font-size: 14px;
+                left: 12px;
+            }
+            
+            button {
+                padding: 10px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left-panel">
+        <h1>Create <span>Account</span></h1>
+        <p>Join the Advanced Detection System</p>
+        <img src="/static/images/drug.png" alt="">
+    </div>
+
+    <div class="right-panel">
+        <h2>Register</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, msg in messages %}
+                    <div class="alert {{ category }}">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="input-with-icon">
+                <i class="fas fa-user"></i>
+                <input type="text" name="full_name" placeholder="Full Name" required />
+            </div>
+            
+            <div class="input-with-icon">
+                <i class="fas fa-envelope"></i>
+                <input type="email" name="email" placeholder="Email" required />
+            </div>
+            
+            <div class="input-with-icon">
+                <i class="fas fa-lock"></i>
+                <input type="password" name="password" placeholder="Password" required />
+            </div>
+
+            <button type="submit">REGISTER</button>
+        </form>
+
+        <p>Already have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
+    </div>
+</div>
+
+</body>
+</html>

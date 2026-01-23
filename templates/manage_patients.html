@@ -1,0 +1,1553 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* ================= BASE STYLES ================= */
+    .content-area {
+        padding: 25px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        min-height: calc(100vh - 150px);
+        font-family: 'Roboto', sans-serif;
+        font-size: 11px;
+    }
+
+    * {
+        font-family: 'Roboto', sans-serif;
+    }
+
+    /* ================= PAGE HEADER ================= */
+    .page-header {
+        background: linear-gradient(135deg, #2864bd 0%, #1d4a8a 100%);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 8px 24px rgba(40, 100, 189, 0.15);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .header-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        backdrop-filter: blur(10px);
+    }
+
+    .header-text h2 {
+        color: white;
+        font-size: 22px;
+        margin: 0 0 4px 0;
+        font-weight: 700;
+    }
+
+    .header-text p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 11px;
+        margin: 0;
+    }
+
+    .header-stats {
+        text-align: right;
+    }
+
+    .stat-number {
+        display: block;
+        font-size: 28px;
+        font-weight: 700;
+        color: white;
+    }
+
+    .stat-label {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.85);
+        margin-top: 4px;
+    }
+
+    /* ================= FLASH MESSAGES ================= */
+    .flash-messages {
+        margin-bottom: 20px;
+    }
+
+    .flash-message {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 11px;
+        animation: slideDown 0.3s ease;
+        border-left: 4px solid;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .flash-success {
+        background: #d4edda;
+        color: #155724;
+        border-left-color: #28a745;
+    }
+
+    .flash-danger {
+        background: #f8d7da;
+        color: #721c24;
+        border-left-color: #dc3545;
+    }
+
+    .flash-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border-left-color: #17a2b8;
+    }
+
+    /* ================= ACTION BAR ================= */
+    .action-bar {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e0e0e0;
+    }
+
+    .search-box {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 12px;
+        color: #999;
+        font-size: 12px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 8px 12px 8px 35px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 11px;
+        transition: all 0.3s ease;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: #2864bd;
+        box-shadow: 0 0 0 3px rgba(40, 100, 189, 0.1);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #2864bd 0%, #1d4a8a 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(40, 100, 189, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(40, 100, 189, 0.4);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    /* ================= TABLE CONTAINER ================= */
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+    }
+
+    .modern-table thead {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        border-bottom: 2px solid #ddd;
+    }
+
+    .modern-table th {
+        padding: 14px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        white-space: nowrap;
+    }
+
+    .modern-table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.2s ease;
+    }
+
+    .modern-table tbody tr:hover {
+        background: #f8f9fa;
+        box-shadow: inset 0 0 0 1px #e0e0e0;
+    }
+
+    .modern-table td {
+        padding: 12px;
+        color: #666;
+    }
+
+    .modern-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    /* ================= TABLE DATA ================= */
+    .patient-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .patient-avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #2864bd 0%, #1d4a8a 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .patient-details h4 {
+        margin: 0 0 4px 0;
+        font-size: 11px;
+        font-weight: 600;
+        color: #222;
+    }
+
+    .patient-meta {
+        display: flex;
+        gap: 10px;
+        font-size: 10px;
+        color: #999;
+    }
+
+    .patient-meta span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .contact-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+    }
+
+    .contact-item i {
+        color: #2864bd;
+        width: 14px;
+        text-align: center;
+    }
+
+    .medical-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .medical-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+    }
+
+    .medical-item i {
+        color: #2864bd;
+        width: 14px;
+        text-align: center;
+    }
+
+    .no-info {
+        font-size: 10px;
+        color: #999;
+        font-style: italic;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 500;
+    }
+
+    .status-badge.active {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .date-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .date-main {
+        font-size: 11px;
+        font-weight: 600;
+        color: #222;
+    }
+
+    .date-time {
+        font-size: 10px;
+        color: #999;
+    }
+
+    .date-by {
+        font-size: 10px;
+        color: #2864bd;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* ================= ACTION BUTTONS ================= */
+    .action-buttons {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .btn-view, .btn-edit, .btn-delete {
+        padding: 6px 10px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+
+    .btn-view {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .btn-view:hover {
+        background: #bee5eb;
+        transform: translateY(-1px);
+    }
+
+    .btn-edit {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .btn-edit:hover {
+        background: #ffeaa7;
+        transform: translateY(-1px);
+    }
+
+    .btn-delete {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .btn-delete:hover {
+        background: #f5c6cb;
+        transform: translateY(-1px);
+    }
+
+    /* ================= MODALS ================= */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+    }
+
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        animation: modalSlide 0.3s ease;
+        z-index: 1001;
+    }
+
+    .modal-lg .modal-content {
+        max-width: 600px;
+    }
+
+    .modal-sm .modal-content {
+        max-width: 400px;
+    }
+
+    @keyframes modalSlide {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -55%);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+    }
+
+    .modal-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #222;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-close:hover {
+        color: #333;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .modal-footer {
+        padding: 16px 20px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .form-group {
+        margin-bottom: 14px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 4px;
+        color: #333;
+        font-weight: 500;
+        font-size: 10px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 11px;
+        font-family: 'Roboto', sans-serif;
+        transition: all 0.2s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #2864bd;
+        box-shadow: 0 0 0 3px rgba(40, 100, 189, 0.1);
+    }
+
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    /* ================= BUTTONS ================= */
+    .btn-primary, .btn-secondary, .btn-danger, .btn-outline {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #2864bd 0%, #1d4a8a 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 100, 189, 0.3);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .btn-outline {
+        background: white;
+        color: #2864bd;
+        border: 2px solid #2864bd;
+    }
+
+    .btn-outline:hover {
+        background: #e3f2fd;
+    }
+
+    /* ================= EMPTY STATE ================= */
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        color: #999;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.3;
+    }
+
+    .empty-state h3 {
+        color: #666;
+        font-size: 16px;
+        margin: 10px 0 8px 0;
+    }
+
+    .empty-state p {
+        color: #999;
+        font-size: 11px;
+        margin: 0 0 15px 0;
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 1024px) {
+        .page-header {
+            padding: 20px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .header-stats {
+            text-align: left;
+        }
+
+        .action-bar {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modern-table {
+            font-size: 10px;
+        }
+
+        .modern-table th,
+        .modern-table td {
+            padding: 10px;
+        }
+
+        .patient-avatar {
+            width: 36px;
+            height: 36px;
+            font-size: 12px;
+        }
+
+        .patient-details h4 {
+            font-size: 10px;
+        }
+
+        .patient-meta {
+            font-size: 9px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .content-area {
+            padding: 15px 12px;
+        }
+
+        .page-header {
+            padding: 18px 16px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+        }
+
+        .header-content {
+            gap: 12px;
+            width: 100%;
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 22px;
+        }
+
+        .header-text h2 {
+            font-size: 18px;
+        }
+
+        .header-text p {
+            font-size: 10px;
+        }
+
+        .header-stats {
+            text-align: left;
+        }
+
+        .stat-number {
+            font-size: 24px;
+        }
+
+        .stat-label {
+            font-size: 9px;
+        }
+
+        .action-bar {
+            flex-direction: column;
+            gap: 12px;
+            padding: 14px 12px;
+        }
+
+        .search-box input {
+            padding: 8px 10px 8px 32px;
+            font-size: 10px;
+        }
+
+        .action-buttons {
+            flex-direction: row;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 8px 12px;
+            font-size: 9px;
+            gap: 6px;
+        }
+
+        .btn-action i {
+            font-size: 10px;
+        }
+
+        .modern-table {
+            font-size: 9px;
+        }
+
+        .modern-table th,
+        .modern-table td {
+            padding: 8px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .patient-info {
+            gap: 8px;
+        }
+
+        .patient-avatar {
+            width: 32px;
+            height: 32px;
+            font-size: 11px;
+        }
+
+        .patient-details h4 {
+            font-size: 9px;
+            margin-bottom: 3px;
+        }
+
+        .patient-meta {
+            font-size: 8px;
+            gap: 6px;
+        }
+
+        .contact-info,
+        .medical-info {
+            gap: 4px;
+        }
+
+        .contact-item,
+        .medical-item {
+            font-size: 8px;
+            gap: 4px;
+        }
+
+        .action-buttons {
+            flex-direction: row;
+            gap: 4px;
+        }
+
+        .btn-view, .btn-edit, .btn-delete {
+            padding: 5px 8px;
+            font-size: 8px;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .modal-content {
+            width: 95%;
+            max-width: 480px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .content-area {
+            padding: 12px 10px;
+        }
+
+        .page-header {
+            padding: 15px 12px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        .header-content {
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        .header-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+        }
+
+        .header-text h2 {
+            font-size: 15px;
+        }
+
+        .header-text p {
+            font-size: 9px;
+        }
+
+        .action-bar {
+            padding: 12px 10px;
+            gap: 10px;
+        }
+
+        .search-box {
+            margin-bottom: 0;
+        }
+
+        .search-box input {
+            padding: 6px 8px 6px 28px;
+            font-size: 9px;
+        }
+
+        .search-box i {
+            left: 8px;
+            font-size: 11px;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .btn-action {
+            width: 100%;
+            justify-content: center;
+            padding: 8px 10px;
+            font-size: 8px;
+        }
+
+        .btn-action span {
+            display: inline;
+        }
+
+        .modern-table {
+            font-size: 8px;
+            min-width: 600px;
+        }
+
+        .modern-table th,
+        .modern-table td {
+            padding: 6px 4px;
+        }
+
+        .patient-info {
+            gap: 6px;
+        }
+
+        .patient-avatar {
+            width: 28px;
+            height: 28px;
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+
+        .patient-details h4 {
+            font-size: 8px;
+        }
+
+        .patient-meta {
+            font-size: 7px;
+            gap: 4px;
+        }
+
+        .contact-info,
+        .medical-info {
+            gap: 2px;
+        }
+
+        .contact-item,
+        .medical-item {
+            font-size: 7px;
+        }
+
+        .date-main {
+            font-size: 9px;
+        }
+
+        .date-time {
+            font-size: 8px;
+        }
+
+        .action-buttons {
+            gap: 3px;
+        }
+
+        .btn-view, .btn-edit, .btn-delete {
+            padding: 4px 6px;
+            font-size: 7px;
+        }
+
+        .btn-view i, .btn-edit i, .btn-delete i {
+            font-size: 8px;
+        }
+
+        .flash-message {
+            padding: 10px 12px;
+            font-size: 9px;
+            margin-bottom: 10px;
+        }
+
+        .empty-state {
+            padding: 40px 15px;
+        }
+
+        .empty-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state h3 {
+            font-size: 14px;
+        }
+
+        .empty-state p {
+            font-size: 9px;
+        }
+
+        .modal-content {
+            width: 95%;
+            max-width: 320px;
+            border-radius: 8px;
+        }
+
+        .modal-header {
+            padding: 12px 14px;
+        }
+
+        .modal-header h3 {
+            font-size: 12px;
+        }
+
+        .modal-body {
+            padding: 14px;
+        }
+
+        .modal-footer {
+            padding: 12px 14px;
+            flex-direction: column;
+        }
+
+        .btn-primary, .btn-secondary, .btn-danger, .btn-outline {
+            padding: 8px 12px;
+            font-size: 9px;
+            width: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            font-size: 9px;
+            margin-bottom: 3px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 6px 8px;
+            font-size: 8px;
+        }
+    }
+</style>
+
+<div class="content-area">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-users-cog"></i>
+            </div>
+            <div class="header-text">
+                <h2>Manage Patients</h2>
+                <p>View, update, and manage patient records</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <span class="stat-number" id="totalCount">{{ patients|length }}</span>
+            <span class="stat-label">Total Patients</span>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div id="flashContainer" class="flash-messages"></div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, msg in messages %}
+            <script>
+                showFlashMessage('{{ msg }}', '{{ category }}');
+            </script>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search patients...">
+        </div>
+        <div class="action-buttons">
+            <a href="{{ url_for('doctor.create_patient') }}" class="btn-action btn-primary">
+                <i class="fas fa-user-plus"></i>
+                <span>Add New Patient</span>
+            </a>
+            <button class="btn-action btn-secondary" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Patients Table -->
+    <div class="table-container">
+        {% if patients %}
+        <div class="table-responsive">
+            <table class="modern-table" id="patientsTable">
+                <thead>
+                    <tr>
+                        <th>Patient Information</th>
+                        <th>Contact Details</th>
+                        <th>Medical Info</th>
+                        <th>Date Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for patient in patients %}
+                    <tr data-patient-id="{{ patient.id }}">
+                        <td>
+                            <div class="patient-info">
+                                <div class="patient-avatar">{{ patient.full_name[0]|upper }}</div>
+                                <div class="patient-details">
+                                    <h4>{{ patient.full_name }}</h4>
+                                    <div class="patient-meta">
+                                        <span><i class="fas fa-id-card"></i> {{ patient.id }}</span>
+                                        <span><i class="fas fa-birthday-cake"></i> {{ patient.age }} yrs</span>
+                                        <span><i class="fas fa-{{ 'venus' if patient.gender == 'Female' else 'mars' if patient.gender == 'Male' else 'transgender' }}"></i> {{ patient.gender }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="contact-info">
+                                <div class="contact-item"><i class="fas fa-phone"></i> {{ patient.contact }}</div>
+                                {% if patient.email %}<div class="contact-item"><i class="fas fa-envelope"></i> {{ patient.email }}</div>{% endif %}
+                                {% if patient.address %}<div class="contact-item"><i class="fas fa-map-marker"></i> {{ patient.address|truncate(25) }}</div>{% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="medical-info">
+                                {% if patient.medical_history %}<div class="medical-item"><i class="fas fa-file-medical"></i> {{ patient.medical_history|truncate(35) }}</div>{% else %}<span class="no-info">No history</span>{% endif %}
+                                <div class="status-badge active"><i class="fas fa-circle"></i> Active</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="date-info">
+                                <div class="date-main">{{ patient.created_at.strftime('%b %d, %Y') }}</div>
+                                <div class="date-time">{{ patient.created_at.strftime('%I:%M %p') }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-view" onclick="viewPatient('{{ patient.id }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn-edit" onclick="editPatient('{{ patient.id }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-delete" onclick="deletePatient('{{ patient.id }}', '{{ patient.full_name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-user-slash"></i>
+            </div>
+            <h3>No Patients Found</h3>
+            <p>There are no patient records in the system yet. Start by adding your first patient.</p>
+            <a href="{{ url_for('doctor.create_patient') }}" class="btn-action btn-primary btn-large">
+                <i class="fas fa-user-plus"></i>
+                Add First Patient
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Edit Patient Modal -->
+<div class="modal" id="editModal">
+    <div class="modal-overlay" onclick="closeModal('editModal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">
+                <i class="fas fa-edit"></i>
+                <h3>Edit Patient</h3>
+            </div>
+            <button class="modal-close" onclick="closeModal('editModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editPatientForm" method="POST" action="">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="edit_full_name">
+                            <i class="fas fa-user"></i> Full Name *
+                        </label>
+                        <input type="text" id="edit_full_name" name="full_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_age">
+                            <i class="fas fa-birthday-cake"></i> Age *
+                        </label>
+                        <input type="number" id="edit_age" name="age" required min="1" max="120">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_gender">
+                            <i class="fas fa-venus-mars"></i> Gender *
+                        </label>
+                        <select id="edit_gender" name="gender" required>
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_contact">
+                            <i class="fas fa-phone"></i> Contact *
+                        </label>
+                        <input type="tel" id="edit_contact" name="contact" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="edit_email">
+                            <i class="fas fa-envelope"></i> Email Address
+                        </label>
+                        <input type="email" id="edit_email" name="email">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="edit_address">
+                            <i class="fas fa-map-marker-alt"></i> Address
+                        </label>
+                        <input type="text" id="edit_address" name="address">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="edit_medical_history">
+                            <i class="fas fa-file-medical"></i> Medical History
+                        </label>
+                        <textarea id="edit_medical_history" name="medical_history" rows="4"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('editModal')">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="deleteModal">
+    <div class="modal-overlay" onclick="closeModal('deleteModal')"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <div class="modal-title">
+                <div class="modal-icon warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <h3>Delete Patient</h3>
+                    <p class="modal-subtitle">This action cannot be undone</p>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeModal('deleteModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-content">
+                <div class="delete-warning">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+                <p>Are you sure you want to delete patient <strong id="deletePatientName"></strong>?</p>
+                <p class="delete-details">All associated medical records and diagnosis data will be permanently removed from the system.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-outline" onclick="closeModal('deleteModal')">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <a href="#" id="confirmDelete" class="btn-danger">
+                <i class="fas fa-trash"></i> Delete Patient
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- View Patient Modal -->
+<div class="modal" id="viewModal">
+    <div class="modal-overlay" onclick="closeModal('viewModal')"></div>
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3><i class="fas fa-eye"></i> Patient Details</h3>
+            <button class="modal-close" onclick="closeModal('viewModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" id="viewModalBody"></div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('viewModal')">Close</button>
+            <button class="btn-primary" onclick="switchToEditModal()">Edit Patient</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Patient Modal -->
+<div class="modal" id="editModal">
+    <div class="modal-overlay" onclick="closeModal('editModal')"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Edit Patient</h3>
+            <button class="modal-close" onclick="closeModal('editModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="editForm">
+            <input type="hidden" id="editPatientId">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="editFullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Age</label>
+                        <input type="number" id="editAge" min="1" max="120" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="editGender" required>
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact</label>
+                        <input type="tel" id="editContact" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Email</label>
+                        <input type="email" id="editEmail">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Address</label>
+                        <input type="text" id="editAddress">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Medical History</label>
+                        <textarea id="editMedicalHistory"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="deleteModal">
+    <div class="modal-overlay" onclick="closeModal('deleteModal')"></div>
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3><i class="fas fa-exclamation-triangle"></i> Delete Patient</h3>
+            <button class="modal-close" onclick="closeModal('deleteModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="margin: 0; font-size: 11px;">Are you sure you want to delete <strong id="deletePatientName"></strong>?</p>
+            <p style="margin: 10px 0 0 0; font-size: 10px; color: #999;">This action cannot be undone. All related diagnosis records will also be deleted.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+            <button class="btn-danger" id="confirmDeleteBtn">Delete Patient</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPatientId = null;
+
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const search = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#tableBody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(search) ? '' : 'none';
+        });
+    });
+
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        location.reload();
+    });
+
+    // View patient
+    async function viewPatient(patientId) {
+        try {
+            const response = await fetch(`/api/patient/${patientId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const p = data.patient;
+                const html = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="font-weight: 600; color: #999; font-size: 10px;">Full Name</label>
+                            <p style="margin: 4px 0 0 0; color: #222;">${p.full_name}</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #999; font-size: 10px;">Age</label>
+                            <p style="margin: 4px 0 0 0; color: #222;">${p.age} years</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #999; font-size: 10px;">Gender</label>
+                            <p style="margin: 4px 0 0 0; color: #222;">${p.gender}</p>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; color: #999; font-size: 10px;">Contact</label>
+                            <p style="margin: 4px 0 0 0; color: #222;">${p.contact}</p>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="font-weight: 600; color: #999; font-size: 10px;">Email</label>
+                            <p style="margin: 4px 0 0 0; color: #222;">${p.email || 'N/A'}</p>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="font-weight: 600; color: #999; font-size: 10px;">Address</label>
+                            <p style="margin: 4px 0 0 0; color: #222;">${p.address || 'N/A'}</p>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="font-weight: 600; color: #999; font-size: 10px;">Medical History</label>
+                            <p style="margin: 4px 0 0 0; color: #222;">${p.medical_history || 'None'}</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('viewModalBody').innerHTML = html;
+                currentPatientId = patientId;
+                openModal('viewModal');
+            }
+        } catch (error) {
+            showFlashMessage('Error loading patient details', 'danger');
+        }
+    }
+
+    // Edit patient
+    function editPatient(patientId) {
+        const row = document.querySelector(`tr[data-patient-id="${patientId}"]`);
+        if (!row) return;
+
+        fetch(`/api/patient/${patientId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const p = data.patient;
+                    document.getElementById('editPatientId').value = p.id;
+                    document.getElementById('editFullName').value = p.full_name;
+                    document.getElementById('editAge').value = p.age;
+                    document.getElementById('editGender').value = p.gender;
+                    document.getElementById('editContact').value = p.contact;
+                    document.getElementById('editEmail').value = p.email || '';
+                    document.getElementById('editAddress').value = p.address || '';
+                    document.getElementById('editMedicalHistory').value = p.medical_history || '';
+                    currentPatientId = patientId;
+                    closeModal('viewModal');
+                    openModal('editModal');
+                }
+            })
+            .catch(() => showFlashMessage('Error loading patient', 'danger'));
+    }
+
+    // Save patient
+    document.getElementById('editForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const patientId = document.getElementById('editPatientId').value;
+        
+        const data = {
+            full_name: document.getElementById('editFullName').value,
+            age: parseInt(document.getElementById('editAge').value),
+            gender: document.getElementById('editGender').value,
+            contact: document.getElementById('editContact').value,
+            email: document.getElementById('editEmail').value,
+            address: document.getElementById('editAddress').value,
+            medical_history: document.getElementById('editMedicalHistory').value
+        };
+
+        try {
+            const response = await fetch(`/api/patient/${patientId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showFlashMessage('Patient updated successfully', 'success');
+                closeModal('editModal');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showFlashMessage(result.message || 'Update failed', 'danger');
+            }
+        } catch (error) {
+            showFlashMessage('Error updating patient', 'danger');
+        }
+    });
+
+    // Delete patient
+    function deletePatient(patientId, patientName) {
+        currentPatientId = patientId;
+        document.getElementById('deletePatientName').textContent = patientName;
+        openModal('deleteModal');
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+        try {
+            const response = await fetch(`/api/patient/${currentPatientId}`, { method: 'DELETE' });
+            const result = await response.json();
+            if (result.success) {
+                showFlashMessage('Patient deleted successfully', 'success');
+                closeModal('deleteModal');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showFlashMessage(result.message || 'Delete failed', 'danger');
+            }
+        } catch (error) {
+            showFlashMessage('Error deleting patient', 'danger');
+        }
+    });
+
+    // Modal functions
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'block';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    function switchToEditModal() {
+        closeModal('viewModal');
+        editPatient(currentPatientId);
+    }
+
+    // Flash message
+    function showFlashMessage(message, type = 'info') {
+        const container = document.getElementById('flashContainer');
+        const div = document.createElement('div');
+        div.className = `flash-message flash-${type}`;
+        div.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        container.appendChild(div);
+        setTimeout(() => div.remove(), 4000);
+    }
+
+    // Close modals on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function() {
+            this.parentElement.style.display = 'none';
+        });
+    });
+</script>
+
+{% endblock %}

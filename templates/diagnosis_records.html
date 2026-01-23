@@ -1,0 +1,1360 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-area">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-file-medical"></i>
+            </div>
+            <div class="header-text">
+                <h2>Diagnosis Records</h2>
+                <p>View and manage all saved endometriosis diagnoses</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat">
+                <span class="stat-number" id="totalRecords">0</span>
+                <span class="stat-label">Total Records</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <div class="flash-messages" id="flashContainer"></div>
+
+    <!-- Filters and Search -->
+    <div class="filter-bar">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search by patient name, ID, or diagnosis..." class="search-input">
+        </div>
+        <div class="filter-controls">
+            <select id="statusFilter" class="filter-select">
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Archived">Archived</option>
+                <option value="Reviewed">Reviewed</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Records Table -->
+    <div class="records-container">
+        <div class="table-wrapper">
+            <table class="records-table" id="recordsTable">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Diagnosis</th>
+                        <th>Confidence</th>
+                        <th>Positive Prob</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsBody">
+                    <tr class="loading-row">
+                        <td colspan="7" class="loading-cell">
+                            <i class="fas fa-spinner fa-spin"></i> Loading diagnosis records...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <div class="empty-icon">
+                <i class="fas fa-inbox"></i>
+            </div>
+            <h3>No Diagnosis Records</h3>
+            <p>Start by creating a new prediction to save diagnosis records</p>
+            <a href="{{ url_for('doctor.detect_endometriosis') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Diagnosis
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal" id="viewModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Diagnosis Details</h3>
+            <button class="modal-close" onclick="closeViewModal()">×</button>
+        </div>
+        <div class="modal-body" id="viewModalBody">
+            <!-- Content loaded dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+            <button class="btn btn-primary" onclick="openEditModal()">Edit</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal" id="editModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit Diagnosis</h3>
+            <button class="modal-close" onclick="closeEditModal()">×</button>
+        </div>
+        <form id="editForm" class="modal-body">
+            <input type="hidden" id="editDiagnosisId">
+            
+            <div class="form-group">
+                <label for="editClinicalNotes">Clinical Notes</label>
+                <textarea id="editClinicalNotes" class="form-control" rows="4" placeholder="Add clinical notes..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="editRecommendations">Recommendations</label>
+                <textarea id="editRecommendations" class="form-control" rows="4" placeholder="Add recommendations..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="editStatus">Status</label>
+                <select id="editStatus" class="form-control">
+                    <option value="Active">Active</option>
+                    <option value="Reviewed">Reviewed</option>
+                    <option value="Archived">Archived</option>
+                </select>
+            </div>
+        </form>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveEditChanges()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="deleteModal" style="display: none;">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3>Delete Diagnosis</h3>
+            <button class="modal-close" onclick="closeDeleteModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete this diagnosis record? This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay -->
+<div class="modal-overlay" id="modalOverlay" style="display: none;" onclick="closeAllModals()"></div>
+
+<style>
+/* ================= BASE STYLES ================= */
+.content-area {
+    padding: 20px;
+    background: #f5f5f5;
+    min-height: calc(100vh - 150px);
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    font-size: 12px;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* ================= PAGE HEADER ================= */
+.page-header {
+    background: white;
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #e0e0e0;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-icon {
+    width: 50px;
+    height: 50px;
+    background: #2864bd;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+}
+
+.header-text h2 {
+    color: #222;
+    font-size: 18px;
+    margin: 0 0 4px 0;
+    font-weight: 600;
+}
+
+.header-text p {
+    color: #777;
+    font-size: 11px;
+    margin: 0;
+}
+
+.stat-number {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #2864bd;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #888;
+}
+
+/* ================= FLASH MESSAGES ================= */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.flash-message {
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    animation: slideIn 0.3s ease-in;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.flash-success {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.flash-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.flash-warning {
+    background: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+/* ================= FILTER BAR ================= */
+.filter-bar {
+    background: white;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+}
+
+.search-box {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-box i {
+    position: absolute;
+    left: 10px;
+    color: #999;
+    font-size: 12px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 10px 8px 30px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #2864bd;
+    box-shadow: 0 0 0 3px rgba(40, 100, 189, 0.1);
+}
+
+.filter-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-select {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;
+    background: white;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+/* ================= TABLE STYLES ================= */
+.records-container {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.records-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.records-table thead {
+    background: #f9f9f9;
+    border-bottom: 1px solid #ddd;
+}
+
+.records-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+}
+
+.records-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #666;
+}
+
+.records-table tbody tr:hover {
+    background: #fafafa;
+}
+
+.records-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ================= TABLE DATA ================= */
+.diagnosis-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.diagnosis-positive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.diagnosis-negative {
+    background: #d4edda;
+    color: #155724;
+}
+
+.confidence-value {
+    font-weight: 600;
+    color: #2864bd;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-active {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.status-reviewed {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-archived {
+    background: #e2e3e5;
+    color: #41464b;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-icon {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    font-family: 'Roboto', Arial, sans-serif;
+}
+
+.btn-view {
+    background: #2864bd;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #1d4a8a;
+}
+
+.btn-edit {
+    background: #ffc107;
+    color: #333;
+}
+
+.btn-edit:hover {
+    background: #e0a800;
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+}
+
+.loading-row {
+    text-align: center;
+}
+
+.loading-cell {
+    padding: 30px !important;
+    color: #999;
+}
+
+.loading-cell i {
+    margin-right: 8px;
+}
+
+/* ================= EMPTY STATE ================= */
+.empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: #999;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: #666;
+    font-size: 16px;
+    margin: 10px 0 5px 0;
+}
+
+.empty-state p {
+    color: #999;
+    font-size: 12px;
+    margin-bottom: 15px;
+}
+
+/* ================= MODAL STYLES ================= */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+}
+
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 999;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 600px;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.modal-sm {
+    max-width: 400px;
+}
+
+.modal-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #222;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 18px;
+}
+
+.modal-footer {
+    padding: 14px 18px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* ================= FORM STYLES ================= */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #333;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Roboto', Arial, sans-serif;
+    transition: all 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #2864bd;
+    box-shadow: 0 0 0 3px rgba(40, 100, 189, 0.1);
+}
+
+textarea.form-control {
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* ================= BUTTONS ================= */
+.btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    font-family: 'Roboto', Arial, sans-serif;
+}
+
+.btn-primary {
+    background: #2864bd;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1d4a8a;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* ================= DETAIL VIEW ================= */
+.detail-row {
+    display: flex;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    min-width: 150px;
+    font-weight: 600;
+    color: #666;
+}
+
+.detail-value {
+    flex: 1;
+    color: #333;
+}
+
+.detail-box {
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 8px;
+    border: 1px solid #ddd;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1024px) {
+    .content-area {
+        padding: 18px 15px;
+    }
+
+    .page-header {
+        padding: 20px;
+        gap: 15px;
+    }
+
+    .header-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
+
+    .header-text h2 {
+        font-size: 20px;
+    }
+
+    .header-text p {
+        font-size: 11px;
+    }
+
+    .stat-number {
+        font-size: 28px;
+    }
+
+    .filter-bar {
+        gap: 12px;
+    }
+
+    .search-box input {
+        padding: 8px 12px 8px 32px;
+        font-size: 11px;
+    }
+
+    .filter-select {
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+
+    .records-table {
+        font-size: 10px;
+    }
+
+    .records-table th,
+    .records-table td {
+        padding: 10px;
+    }
+
+    .action-buttons {
+        gap: 5px;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        padding: 15px 12px;
+    }
+
+    .page-header {
+        flex-direction: column;
+        padding: 18px 16px;
+        gap: 12px;
+        margin-bottom: 18px;
+        border-radius: 10px;
+    }
+
+    .header-content {
+        width: 100%;
+        gap: 12px;
+    }
+
+    .header-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+
+    .header-text h2 {
+        font-size: 18px;
+    }
+
+    .header-text p {
+        font-size: 10px;
+    }
+
+    .header-stats {
+        text-align: left;
+    }
+
+    .stat-number {
+        font-size: 24px;
+    }
+
+    .stat-label {
+        font-size: 9px;
+    }
+
+    .filter-bar {
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+        margin-bottom: 15px;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .search-box input {
+        padding: 7px 10px 7px 32px;
+        font-size: 10px;
+    }
+
+    .filter-controls {
+        width: 100%;
+    }
+
+    .filter-select {
+        width: 100%;
+        padding: 7px 10px;
+        font-size: 10px;
+    }
+
+    .records-container {
+        border-radius: 10px;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .records-table {
+        font-size: 9px;
+        min-width: 700px;
+    }
+
+    .records-table thead {
+        background: #f5f7fa;
+    }
+
+    .records-table th {
+        padding: 10px 8px;
+        font-size: 10px;
+    }
+
+    .records-table td {
+        padding: 8px;
+        font-size: 9px;
+    }
+
+    .action-buttons {
+        flex-direction: row;
+        gap: 4px;
+    }
+
+    .btn-icon {
+        padding: 5px 8px;
+        font-size: 8px;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-width: 480px;
+        border-radius: 10px;
+    }
+
+    .modal-header {
+        padding: 16px 14px;
+    }
+
+    .modal-header h3 {
+        font-size: 16px;
+    }
+
+    .modal-body {
+        padding: 16px 14px;
+    }
+
+    .empty-state {
+        padding: 40px 20px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+
+    .empty-state h3 {
+        font-size: 16px;
+    }
+
+    .empty-state p {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-area {
+        padding: 12px 10px;
+    }
+
+    .page-header {
+        padding: 14px 12px;
+        margin-bottom: 14px;
+        border-radius: 8px;
+    }
+
+    .header-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+
+    .header-text h2 {
+        font-size: 15px;
+        margin-bottom: 4px;
+    }
+
+    .header-text p {
+        font-size: 8px;
+    }
+
+    .stat-number {
+        font-size: 20px;
+    }
+
+    .stat-label {
+        font-size: 8px;
+    }
+
+    .filter-bar {
+        padding: 12px 10px;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .search-box i {
+        left: 8px;
+        font-size: 10px;
+    }
+
+    .search-box input {
+        padding: 6px 8px 6px 28px;
+        font-size: 8px;
+    }
+
+    .filter-select {
+        padding: 6px 8px;
+        font-size: 8px;
+    }
+
+    .records-table {
+        font-size: 7px;
+        min-width: 500px;
+    }
+
+    .records-table th {
+        padding: 6px 4px;
+        font-size: 8px;
+    }
+
+    .records-table td {
+        padding: 6px 4px;
+        font-size: 7px;
+    }
+
+    .action-buttons {
+        gap: 3px;
+    }
+
+    .btn-icon {
+        padding: 4px 6px;
+        font-size: 7px;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-width: 320px;
+        border-radius: 8px;
+    }
+
+    .modal-header {
+        padding: 12px 12px;
+    }
+
+    .modal-header h3 {
+        font-size: 13px;
+    }
+
+    .modal-close {
+        font-size: 18px;
+    }
+
+    .modal-body {
+        padding: 12px;
+    }
+
+    .modal-footer {
+        padding: 10px 12px;
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 8px;
+    }
+
+    .empty-state {
+        padding: 30px 15px;
+    }
+
+    .empty-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+    }
+
+    .empty-state h3 {
+        font-size: 13px;
+        margin: 8px 0 6px 0;
+    }
+
+    .empty-state p {
+        font-size: 8px;
+    }
+
+    .loading-row .loading-cell {
+        padding: 20px;
+        font-size: 10px;
+    }
+}
+</style>
+
+<script>
+let allRecords = [];
+let currentViewingRecord = null;
+let currentEditingRecord = null;
+
+// Load diagnosis records on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadDiagnosisRecords();
+});
+
+// Load diagnosis records from API
+async function loadDiagnosisRecords() {
+    try {
+        const response = await fetch('/api/diagnosis-records');
+        const data = await response.json();
+        
+        if (data.success) {
+            allRecords = data.records;
+            renderTable(allRecords);
+            document.getElementById('totalRecords').textContent = allRecords.length;
+        } else {
+            showFlashMessage(data.message || 'Failed to load records', 'danger');
+        }
+    } catch (error) {
+        console.error('Error loading records:', error);
+        showFlashMessage('Error loading diagnosis records', 'danger');
+    }
+}
+
+// Render records table
+function renderTable(records) {
+    const tbody = document.getElementById('recordsBody');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (records.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    tbody.innerHTML = records.map(record => `
+        <tr>
+            <td>
+                <strong>${record.patient_name}</strong><br>
+                <small style="color: #999;">${record.patient_id}</small>
+            </td>
+            <td>
+                <span class="diagnosis-badge ${record.diagnosis_text.includes('Detected') ? 'diagnosis-positive' : 'diagnosis-negative'}">
+                    ${record.diagnosis_text}
+                </span>
+            </td>
+            <td>
+                <span class="confidence-value">${record.confidence_score.toFixed(1)}%</span>
+            </td>
+            <td>${(record.probability_positive * 100).toFixed(1)}%</td>
+            <td>
+                <small>${record.created_at}</small>
+            </td>
+            <td>
+                <span class="status-badge status-${record.status.toLowerCase()}">
+                    ${record.status}
+                </span>
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon btn-view" onclick="viewDiagnosis(${record.id})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn-icon btn-delete" onclick="deleteDiagnosis(${record.id})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// View diagnosis details
+async function viewDiagnosis(diagnosisId) {
+    try {
+        const response = await fetch(`/api/diagnosis/${diagnosisId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            currentViewingRecord = data.diagnosis;
+            displayViewModal(data.diagnosis);
+        }
+    } catch (error) {
+        console.error('Error fetching diagnosis:', error);
+        showFlashMessage('Error loading diagnosis details', 'danger');
+    }
+}
+
+// Display view modal
+function displayViewModal(record) {
+    const body = document.getElementById('viewModalBody');
+    
+    body.innerHTML = `
+        <div class="detail-row">
+            <div class="detail-label">Patient:</div>
+            <div class="detail-value">${record.patient_name} (${record.patient_id})</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Doctor:</div>
+            <div class="detail-value">${record.doctor_name}</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Diagnosis:</div>
+            <div class="detail-value">
+                <span class="diagnosis-badge ${record.diagnosis_text.includes('Detected') ? 'diagnosis-positive' : 'diagnosis-negative'}">
+                    ${record.diagnosis_text}
+                </span>
+            </div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Confidence:</div>
+            <div class="detail-value"><strong>${record.confidence_score.toFixed(1)}%</strong></div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Positive Prob:</div>
+            <div class="detail-value">${(record.probability_positive * 100).toFixed(1)}%</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Negative Prob:</div>
+            <div class="detail-value">${(record.probability_negative * 100).toFixed(1)}%</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Status:</div>
+            <div class="detail-value">
+                <span class="status-badge status-${record.status.toLowerCase()}">
+                    ${record.status}
+                </span>
+            </div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Created:</div>
+            <div class="detail-value">${record.created_at}</div>
+        </div>
+        ${record.clinical_notes ? `
+        <div class="detail-row">
+            <div class="detail-label">Clinical Notes:</div>
+            <div class="detail-value">
+                <div class="detail-box">${record.clinical_notes}</div>
+            </div>
+        </div>
+        ` : ''}
+        ${record.recommendations ? `
+        <div class="detail-row">
+            <div class="detail-label">Recommendations:</div>
+            <div class="detail-value">
+                <div class="detail-box">${record.recommendations}</div>
+            </div>
+        </div>
+        ` : ''}
+    `;
+    
+    openViewModal();
+}
+
+// Open edit modal
+function openEditModal() {
+    if (!currentViewingRecord) return;
+    
+    closeViewModal();
+    
+    document.getElementById('editDiagnosisId').value = currentViewingRecord.id;
+    document.getElementById('editClinicalNotes').value = currentViewingRecord.clinical_notes || '';
+    document.getElementById('editRecommendations').value = currentViewingRecord.recommendations || '';
+    document.getElementById('editStatus').value = currentViewingRecord.status;
+    
+    currentEditingRecord = currentViewingRecord;
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('editModal').style.display = 'block';
+}
+
+// Save edit changes
+async function saveEditChanges() {
+    const diagnosisId = document.getElementById('editDiagnosisId').value;
+    
+    try {
+        const response = await fetch(`/api/diagnosis/${diagnosisId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                clinical_notes: document.getElementById('editClinicalNotes').value,
+                recommendations: document.getElementById('editRecommendations').value,
+                status: document.getElementById('editStatus').value
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showFlashMessage('Diagnosis updated successfully', 'success');
+            closeEditModal();
+            loadDiagnosisRecords();
+        } else {
+            showFlashMessage(data.message || 'Failed to update diagnosis', 'danger');
+        }
+    } catch (error) {
+        console.error('Error updating diagnosis:', error);
+        showFlashMessage('Error updating diagnosis', 'danger');
+    }
+}
+
+// Delete diagnosis
+function deleteDiagnosis(diagnosisId) {
+    currentEditingRecord = { id: diagnosisId };
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+// Confirm delete
+async function confirmDelete() {
+    const diagnosisId = currentEditingRecord.id;
+    
+    try {
+        const response = await fetch(`/api/diagnosis/${diagnosisId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showFlashMessage('Diagnosis deleted successfully', 'success');
+            closeDeleteModal();
+            loadDiagnosisRecords();
+        } else {
+            showFlashMessage(data.message || 'Failed to delete diagnosis', 'danger');
+        }
+    } catch (error) {
+        console.error('Error deleting diagnosis:', error);
+        showFlashMessage('Error deleting diagnosis', 'danger');
+    }
+}
+
+// Modal functions
+function openViewModal() {
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('viewModal').style.display = 'block';
+}
+
+function closeViewModal() {
+    document.getElementById('viewModal').style.display = 'none';
+    if (!document.getElementById('editModal') || document.getElementById('editModal').style.display === 'none') {
+        document.getElementById('modalOverlay').style.display = 'none';
+    }
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    document.getElementById('modalOverlay').style.display = 'none';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    document.getElementById('modalOverlay').style.display = 'none';
+}
+
+function closeAllModals() {
+    document.getElementById('viewModal').style.display = 'none';
+    document.getElementById('editModal').style.display = 'none';
+    document.getElementById('deleteModal').style.display = 'none';
+    document.getElementById('modalOverlay').style.display = 'none';
+}
+
+// Search and filter
+document.getElementById('searchInput').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    const filtered = allRecords.filter(record => {
+        const matchesSearch = 
+            record.patient_name.toLowerCase().includes(searchTerm) ||
+            record.patient_id.toLowerCase().includes(searchTerm) ||
+            record.diagnosis_text.toLowerCase().includes(searchTerm);
+        
+        const matchesStatus = !statusFilter || record.status === statusFilter;
+        
+        return matchesSearch && matchesStatus;
+    });
+    
+    renderTable(filtered);
+});
+
+document.getElementById('statusFilter').addEventListener('change', function() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = this.value;
+    
+    const filtered = allRecords.filter(record => {
+        const matchesSearch = 
+            record.patient_name.toLowerCase().includes(searchTerm) ||
+            record.patient_id.toLowerCase().includes(searchTerm) ||
+            record.diagnosis_text.toLowerCase().includes(searchTerm);
+        
+        const matchesStatus = !statusFilter || record.status === statusFilter;
+        
+        return matchesSearch && matchesStatus;
+    });
+    
+    renderTable(filtered);
+});
+
+// Flash message function
+function showFlashMessage(message, type = 'info') {
+    const container = document.getElementById('flashContainer');
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}
