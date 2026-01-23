@@ -1,4 +1,5 @@
-__pycache__
+# Railway Ignore File
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -10,3 +11,7 @@ venv/
 .DS_Store
 *.db
 instance/
+.git
+.gitignore
+.env.local
+node_modules/
