@@ -2,6 +2,7 @@ import pickle
 import numpy as np
 import os
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
+from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
@@ -9,33 +10,85 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ==============================================================================
-# STACKED MODEL CLASS (Module Level)
+# STACKED MODEL CLASS (Module Level - Must match doctor_routes.py)
 # ==============================================================================
-class StackedEndometriosisModel:
-    def __init__(self, rf, gb, ab, meta, scaler):
-        self.rf = rf
+class AdvancedStackedEndometriosisModel:
+    """
+    Advanced ensemble model for endometriosis prediction combining:
+    - Gradient Boosting
+    - Random Forest
+    - AdaBoost
+    - Support Vector Machine
+    with a meta-learner
+    """
+    
+    def __init__(self, gb, rf, ada, svm, meta, scaler):
         self.gb = gb
-        self.ab = ab
+        self.rf = rf
+        self.ada = ada
+        self.svm = svm
         self.meta = meta
         self.scaler = scaler
-    
-    def predict_proba(self, X):
-        """Predict probability of endometriosis"""
-        X_scaled = self.scaler.transform(X)
-        rf_proba = self.rf.predict_proba(X_scaled)[:, 1]
-        gb_proba = self.gb.predict_proba(X_scaled)[:, 1]
-        ab_proba = self.ab.predict_proba(X_scaled)[:, 1]
-        X_meta = np.column_stack([rf_proba, gb_proba, ab_proba])
-        return self.meta.predict_proba(X_meta)
+        self.feature_names = [
+            'menstrual_irregularity',
+            'hormone_level',
+            'infertility',
+            'family_history',
+            'ovulation_dysfunction',
+            'prior_surgery'
+        ]
     
     def predict(self, X):
-        """Predict endometriosis (0 or 1)"""
+        """Make binary prediction (0 or 1)"""
         X_scaled = self.scaler.transform(X)
-        rf_proba = self.rf.predict_proba(X_scaled)[:, 1]
-        gb_proba = self.gb.predict_proba(X_scaled)[:, 1]
-        ab_proba = self.ab.predict_proba(X_scaled)[:, 1]
-        X_meta = np.column_stack([rf_proba, gb_proba, ab_proba])
-        return self.meta.predict(X_meta)
+        
+        # Get predictions from base models
+        gb_pred = self.gb.predict_proba(X_scaled)
+        rf_pred = self.rf.predict_proba(X_scaled)
+        ada_pred = self.ada.predict_proba(X_scaled)
+        svm_pred = self.svm.predict_proba(X_scaled)
+        
+        # Stack predictions
+        meta_features = np.hstack([gb_pred, rf_pred, ada_pred, svm_pred])
+        
+        # Final prediction from meta-learner
+        return self.meta.predict(meta_features)
+    
+    def predict_proba(self, X):
+        """Get probability estimates"""
+        X_scaled = self.scaler.transform(X)
+        
+        # Get predictions from base models
+        gb_pred = self.gb.predict_proba(X_scaled)
+        rf_pred = self.rf.predict_proba(X_scaled)
+        ada_pred = self.ada.predict_proba(X_scaled)
+        svm_pred = self.svm.predict_proba(X_scaled)
+        
+        # Stack predictions
+        meta_features = np.hstack([gb_pred, rf_pred, ada_pred, svm_pred])
+        
+        # Final probabilities from meta-learner
+        return self.meta.predict_proba(meta_features)
+    
+    def predict_with_confidence(self, X):
+        """Get predictions with confidence scores and reasoning"""
+        proba = self.predict_proba(X)
+        pred = self.predict(X)
+        
+        results = []
+        for i in range(len(pred)):
+            confidence = max(proba[i]) * 100
+            risk_level = "HIGH" if proba[i][1] >= 0.7 else "MODERATE" if proba[i][1] >= 0.4 else "LOW"
+            
+            results.append({
+                'prediction': pred[i],
+                'probability_no_endo': float(proba[i][0]) * 100,
+                'probability_endo': float(proba[i][1]) * 100,
+                'confidence': float(confidence),
+                'risk_level': risk_level
+            })
+        
+        return results
 
 def train_endometriosis_model():
     """
@@ -147,14 +200,23 @@ def train_endometriosis_model():
     print(f"✅ AdaBoost - CV Accuracy: {ab_scores.mean():.4f} (+/- {ab_scores.std():.4f})")
 
     # ==============================================================================
+    # BASE LEARNER 4: SUPPORT VECTOR MACHINE
+    # ==============================================================================
+    svm_model = SVC(kernel='rbf', probability=True, random_state=42)
+    svm_model.fit(X_train_scaled, y_train)
+    svm_scores = cross_val_score(svm_model, X_train_scaled, y_train, cv=5)
+    print(f"✅ SVM - CV Accuracy: {svm_scores.mean():.4f} (+/- {svm_scores.std():.4f})")
+
+    # ==============================================================================
     # GENERATE META-FEATURES
     # ==============================================================================
     print("\n🔄 Generating Meta-Features...")
-    rf_proba = rf_model.predict_proba(X_train_scaled)[:, 1]
-    gb_proba = gb_model.predict_proba(X_train_scaled)[:, 1]
-    ab_proba = ab_model.predict_proba(X_train_scaled)[:, 1]
+    gb_proba = gb_model.predict_proba(X_train_scaled)
+    rf_proba = rf_model.predict_proba(X_train_scaled)
+    ab_proba = ab_model.predict_proba(X_train_scaled)
+    svm_proba = svm_model.predict_proba(X_train_scaled)
     
-    X_meta = np.column_stack([rf_proba, gb_proba, ab_proba])
+    X_meta = np.hstack([gb_proba, rf_proba, ab_proba, svm_proba])
 
     # ==============================================================================
     # META-LEARNER: LOGISTIC REGRESSION
@@ -168,7 +230,7 @@ def train_endometriosis_model():
     # ==============================================================================
     # SAVE MODEL
     # ==============================================================================
-    stacked_model = StackedEndometriosisModel(rf_model, gb_model, ab_model, meta_learner, scaler)
+    stacked_model = AdvancedStackedEndometriosisModel(gb_model, rf_model, ab_model, svm_model, meta_learner, scaler)
     
     model_path = os.path.join(os.path.dirname(__file__), "stacked_model.pkl")
     with open(model_path, "wb") as f:
