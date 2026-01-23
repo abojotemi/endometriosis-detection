@@ -7,90 +7,9 @@ import pickle
 import numpy as np
 import os
 
-# ===================== ADVANCED STACKED MODEL CLASS =====================
-# Define the model class so it can be unpickled correctly
-
-class AdvancedStackedEndometriosisModel:
-    """
-    Advanced ensemble model for endometriosis prediction combining:
-    - Gradient Boosting
-    - Random Forest
-    - AdaBoost
-    - Support Vector Machine
-    with a meta-learner
-    """
-    
-    def __init__(self, gb, rf, ada, svm, meta, scaler):
-        self.gb = gb
-        self.rf = rf
-        self.ada = ada
-        self.svm = svm
-        self.meta = meta
-        self.scaler = scaler
-        self.feature_names = [
-            'menstrual_irregularity',
-            'hormone_level',
-            'infertility',
-            'family_history',
-            'ovulation_dysfunction',
-            'prior_surgery'
-        ]
-    
-    def predict(self, X):
-        """Make binary prediction (0 or 1)"""
-        X_scaled = self.scaler.transform(X)
-        
-        # Get predictions from base models
-        gb_pred = self.gb.predict_proba(X_scaled)
-        rf_pred = self.rf.predict_proba(X_scaled)
-        ada_pred = self.ada.predict_proba(X_scaled)
-        svm_pred = self.svm.predict_proba(X_scaled)
-        
-        # Stack predictions
-        meta_features = np.hstack([gb_pred, rf_pred, ada_pred, svm_pred])
-        
-        # Final prediction from meta-learner
-        return self.meta.predict(meta_features)
-    
-    def predict_proba(self, X):
-        """Get probability estimates"""
-        X_scaled = self.scaler.transform(X)
-        
-        # Get predictions from base models
-        gb_pred = self.gb.predict_proba(X_scaled)
-        rf_pred = self.rf.predict_proba(X_scaled)
-        ada_pred = self.ada.predict_proba(X_scaled)
-        svm_pred = self.svm.predict_proba(X_scaled)
-        
-        # Stack predictions
-        meta_features = np.hstack([gb_pred, rf_pred, ada_pred, svm_pred])
-        
-        # Final probabilities from meta-learner
-        return self.meta.predict_proba(meta_features)
-    
-    def predict_with_confidence(self, X):
-        """Get predictions with confidence scores and reasoning"""
-        proba = self.predict_proba(X)
-        pred = self.predict(X)
-        
-        results = []
-        for i in range(len(pred)):
-            confidence = max(proba[i]) * 100
-            risk_level = "HIGH" if proba[i][1] >= 0.7 else "MODERATE" if proba[i][1] >= 0.4 else "LOW"
-            
-            results.append({
-                'prediction': pred[i],
-                'probability_no_endo': float(proba[i][0]) * 100,
-                'probability_endo': float(proba[i][1]) * 100,
-                'confidence': float(confidence),
-                'risk_level': risk_level
-            })
-        
-        return results
-
 doctor = Blueprint("doctor", __name__)
 
-# ===================== ML MODEL LOADING (FIXED PATH) =====================
+# ===================== ML MODEL LOADING (DICTIONARY FORMAT) =====================
 
 # Get project root directory (where run.py is located)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -113,6 +32,63 @@ def load_ml_model():
     except Exception as e:
         print(f"❌ Error loading ML model: {str(e)}")
         model_loaded = False
+
+def predict_endometriosis(features_array):
+    """
+    Make prediction using the stacked ensemble model
+    features_array: np.array of shape (1, 6) or (n, 6)
+    Returns: dict with predictions and confidence
+    """
+    global stacked_model, model_loaded
+    
+    if not model_loaded or stacked_model is None:
+        return None
+    
+    try:
+        # Scale the input features
+        X_scaled = stacked_model['scaler'].transform(features_array)
+        
+        # Get predictions from all base models
+        gb_proba = stacked_model['gb_model'].predict_proba(X_scaled)
+        rf_proba = stacked_model['rf_model'].predict_proba(X_scaled)
+        ada_proba = stacked_model['ada_model'].predict_proba(X_scaled)
+        svm_proba = stacked_model['svm_model'].predict_proba(X_scaled)
+        
+        # Stack predictions for meta-learner
+        meta_features = np.hstack([gb_proba, rf_proba, ada_proba, svm_proba])
+        
+        # Get final prediction and probability
+        final_proba = stacked_model['meta_learner'].predict_proba(meta_features)
+        final_pred = stacked_model['meta_learner'].predict(meta_features)
+        
+        # Format results
+        results = []
+        for i in range(len(final_pred)):
+            prob_no_endo = float(final_proba[i][0]) * 100
+            prob_endo = float(final_proba[i][1]) * 100
+            confidence = max(final_proba[i]) * 100
+            
+            # Risk level based on probability
+            if prob_endo >= 70:
+                risk_level = "HIGH"
+            elif prob_endo >= 40:
+                risk_level = "MODERATE"
+            else:
+                risk_level = "LOW"
+            
+            results.append({
+                'prediction': int(final_pred[i]),
+                'probability_no_endo': prob_no_endo,
+                'probability_endo': prob_endo,
+                'confidence': confidence,
+                'risk_level': risk_level
+            })
+        
+        return results[0] if len(results) == 1 else results
+        
+    except Exception as e:
+        print(f"❌ Error during prediction: {str(e)}")
+        return None
 
 # Load model when module is imported
 load_ml_model()
