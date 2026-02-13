@@ -1,0 +1,8 @@
+*/__pycache__/*
+__pycache__/
+
+.python-version
+main.py
+pyproject.toml
+
+.venv/*
