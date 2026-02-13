@@ -42,6 +42,7 @@ def predict_endometriosis(features_array):
     global stacked_model, model_loaded
     
     if not model_loaded or stacked_model is None:
+        load_ml_model()
         return None
     
     try:
